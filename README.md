@@ -1,19 +1,39 @@
-# mtgatricks
+# mtga-combat-canary
 
-A companion app for Magic: The Gathering / MTG Arena that answers one question fast:
-**given the opponent's open mana, what could they cast at instant speed?** Pick a set,
-enter (or auto-detect) the untapped mana, and get every instant and flash card they
-could have, grouped by rarity — commons first, since those are what you'll actually
-face in limited.
+A companion app for Magic: The Gathering / Arena Sealed/Draft play that answers one question fast:
+**given the opponent's open mana, what could they cast at instant speed?** 
 
-It ships two ways from one codebase:
+There are 2 version. The web versino you can use [HERE](https://minimapletinytools.github.io/mtga-combat-canary/)
 
-- **Web app** — fully static, manual mana entry. Card data comes from the Scryfall API
-  in the browser and is cached in IndexedDB, so a set is fetched once and then works
-  offline. Deploy `apps/web/dist` to any static host.
-- **Desktop app (Electron)** — the same UI plus live tracking: it tails MTG Arena's
-  `Player.log` and fills in the opponent's untapped mana automatically as you play,
-  with a status chip and a manual-override toggle.
+The desktop electron app version supports tailing your MTGA log file to auto-detect open mana.
+
+## Running
+
+### Desktop
+
+```sh
+pnpm -r build                            # core/arena/data + web dist + desktop
+pnpm --filter @mtgatricks/desktop start  # launch the Electron app
+```
+
+For auto-tracking, enable **Options → Account → Detailed Logs (Plugin Support)** in
+MTG Arena. First desktop launch downloads Scryfall's bulk card data once (~100MB) to
+build the arena-id map, cached under the app's user-data directory. Dev mode:
+`MTGATRICKS_DEV_URL=http://localhost:5173 pnpm --filter @mtgatricks/desktop start`
+against a running vite dev server. Optional live API smoke test:
+`LIVE_SCRYFALL=1 pnpm --filter @mtgatricks/data exec vitest run test/live.integration.test.ts`.
+
+### Web
+
+The web app is hosted at [https://minimapletinytools.github.io/mtga-combat-canary/](https://minimapletinytools.github.io/mtga-combat-canary/) so you can just use it there
+
+```sh
+pnpm install
+pnpm -r test                             # all package tests
+pnpm --filter @mtgatricks/web dev        # web dev server
+pnpm --filter @mtgatricks/web build      # static build → apps/web/dist
+```
+
 
 ## How it works
 
@@ -54,29 +74,6 @@ crash.
 
 See `PLAN.md` for the full architecture, pinned interfaces, and phase history.
 
-## Running
-
-```sh
-pnpm install
-pnpm -r test                             # all package tests
-pnpm --filter @mtgatricks/web dev        # web dev server
-pnpm --filter @mtgatricks/web build      # static build → apps/web/dist
-```
-
-Desktop:
-
-```sh
-pnpm -r build                            # core/arena/data + web dist + desktop
-pnpm --filter @mtgatricks/desktop start  # launch the Electron app
-```
-
-For auto-tracking, enable **Options → Account → Detailed Logs (Plugin Support)** in
-MTG Arena. First desktop launch downloads Scryfall's bulk card data once (~100MB) to
-build the arena-id map, cached under the app's user-data directory. Dev mode:
-`MTGATRICKS_DEV_URL=http://localhost:5173 pnpm --filter @mtgatricks/desktop start`
-against a running vite dev server. Optional live API smoke test:
-`LIVE_SCRYFALL=1 pnpm --filter @mtgatricks/data exec vitest run test/live.integration.test.ts`.
-
 ## Known gaps
 
 - **Eldrazi Spawn / Scion tokens aren't counted.** They sacrifice for `{C}`, but their
@@ -102,3 +99,11 @@ against a running vite dev server. Optional live API smoke test:
 - **The log format is unofficial** and has broken across Arena patches before. The app
   is built to degrade to manual mode, but tracking can silently lag a patch until the
   parser is updated.
+- **
+
+
+## Maintenance and Contribution
+
+This app queries and caches data from scryfall so it should stay most up to date without any maintenance unless scryfall APIs change.
+
+The desktop floating mana detection is likely to break with each new sets as the lands ids change and this requires someone to manually update the new card ids or perhaps we can find a more stable solution... I play on and off so I may not always update it. You're welcome to open issues or create PRs and I will take a look though!
