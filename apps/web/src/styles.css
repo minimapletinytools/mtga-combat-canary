@@ -25,6 +25,16 @@
   --mana-r: #e0584a;
   --mana-g: #3fae6a;
   --mana-c: #b9b9c2;
+
+  /* Deeper tones for full-box stepper fills (ManaInput) — the light swatch
+     colors above read fine as a small dot but don't leave enough contrast
+     for text sitting directly on top of a full-box fill. */
+  --mana-w-fill: #8a7434;
+  --mana-u-fill: #2f6ea8;
+  --mana-b-fill: #5c4b78;
+  --mana-r-fill: #a8402e;
+  --mana-g-fill: #2c7a4a;
+  --mana-c-fill: #55555f;
 }
 
 * {
@@ -256,9 +266,11 @@ button:focus-visible {
   gap: 0.5rem;
 }
 
-/* Each stepper is a narrow vertical chip: swatch+label on top, then a
-   compact +/value/- stack — this (rather than side-by-side +/- buttons)
-   is what lets many steppers sit close together per row. */
+/* Each stepper is a narrow vertical chip whose background IS the mana
+   color (a single fill, or an ~20°-tilted hard-edged split for 2+ colors —
+   see manaFillBackground in ManaInput.tsx), with a compact +/value/-
+   stack on top — this (rather than side-by-side +/- buttons) is what lets
+   many steppers sit close together per row. */
 .stepper {
   display: flex;
   flex-direction: column;
@@ -269,20 +281,6 @@ button:focus-visible {
   border-radius: 10px;
   padding: 0.5rem 0.5rem 0.45rem;
   width: 64px;
-}
-
-.stepper-top {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-}
-
-.stepper-swatch {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  border: 1px solid rgba(0, 0, 0, 0.35);
 }
 
 .stepper.mana-w .stepper-swatch {
@@ -318,14 +316,16 @@ button:focus-visible {
   font-weight: 700;
   font-size: 0.8rem;
   letter-spacing: 0.01em;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
 }
 
 .stepper-btn {
   width: 100%;
   height: 20px;
   border-radius: 5px;
-  border: 1px solid var(--border-light);
-  background: var(--bg-input);
+  border: 1px solid rgba(0, 0, 0, 0.4);
+  background: rgba(16, 16, 20, 0.55);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -333,10 +333,11 @@ button:focus-visible {
   line-height: 1;
   font-size: 0.85rem;
   padding: 0;
+  color: #fff;
 }
 
 .stepper-btn:hover:not(:disabled) {
-  background: #2a2a34;
+  background: rgba(16, 16, 20, 0.8);
   border-color: var(--accent);
 }
 
@@ -351,6 +352,8 @@ button:focus-visible {
   font-weight: 700;
   font-size: 0.9rem;
   line-height: 1;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
 }
 
 /* Compact variant for the dual/tri-land steppers — same vertical layout,
@@ -362,11 +365,6 @@ button:focus-visible {
 
 .stepper-compact .stepper-label {
   font-size: 0.68rem;
-}
-
-.stepper-compact .stepper-swatch {
-  width: 11px;
-  height: 11px;
 }
 
 /* Dual & tri-lands (expandable section) */

@@ -5,11 +5,7 @@ import type { ManualManaProvider } from '../manaProvider';
 /** WUBRG — the standard color-pie order everything below is generated from. */
 const COLOR_WHEEL: readonly Color[] = ['W', 'U', 'B', 'R', 'G'];
 
-const COLORS: { key: Color; label: string; className: string }[] = COLOR_WHEEL.map((key) => ({
-  key,
-  label: key,
-  className: `mana-${key.toLowerCase()}`,
-}));
+const COLORS: { key: Color; label: string }[] = COLOR_WHEEL.map((key) => ({ key, label: key }));
 
 /** Every k-color subset of WUBRG: each combo's own letters are already in
  * wheel order (inner loop starts after the outer index), and the list of
@@ -42,22 +38,27 @@ function comboKey(colors: readonly Color[]): string {
   return colors.join('');
 }
 
-const MANA_COLOR_VAR: Record<Color | 'C', string> = {
-  W: 'var(--mana-w)',
-  U: 'var(--mana-u)',
-  B: 'var(--mana-b)',
-  R: 'var(--mana-r)',
-  G: 'var(--mana-g)',
-  C: 'var(--mana-c)',
+const MANA_FILL_VAR: Record<Color | 'C', string> = {
+  W: 'var(--mana-w-fill)',
+  U: 'var(--mana-u-fill)',
+  B: 'var(--mana-b-fill)',
+  R: 'var(--mana-r-fill)',
+  G: 'var(--mana-g-fill)',
+  C: 'var(--mana-c-fill)',
 };
 
-/** CSS background for a swatch representing 2+ colors: an even horizontal split. */
-function comboSwatchBackground(colors: readonly Color[]): string {
+/** The whole stepper box's background: a solid fill for one color, or a
+ * hard-edged split — tilted 20° off horizontal — for 2+ colors, so a dual
+ * or tri-land box visibly shows a band of each of its colors. */
+function manaFillBackground(colors: ReadonlyArray<Color | 'C'>): string {
+  if (colors.length <= 1) {
+    return MANA_FILL_VAR[colors[0] ?? 'C'];
+  }
   const n = colors.length;
   const stops = colors
-    .map((c, i) => `${MANA_COLOR_VAR[c]} ${(i / n) * 100}% ${((i + 1) / n) * 100}%`)
+    .map((c, i) => `${MANA_FILL_VAR[c]} ${(i / n) * 100}% ${((i + 1) / n) * 100}%`)
     .join(', ');
-  return `linear-gradient(90deg, ${stops})`;
+  return `linear-gradient(20deg, ${stops})`;
 }
 
 interface Counts {
@@ -173,17 +174,17 @@ export function ManaInput({ manaProvider, hidden }: ManaInputProps) {
       </div>
 
       <div className="mana-steppers">
-        {COLORS.map(({ key, label, className }) => (
+        {COLORS.map(({ key, label }) => (
           <Stepper
             key={key}
             label={label}
-            className={className}
+            colors={[key]}
             value={counts.colors[key]}
             onChange={(delta) => updateColor(key, delta)}
           />
         ))}
-        <Stepper label="C" className="mana-c" value={counts.c} onChange={updateC} />
-        <Stepper label="Any" className="mana-any" value={counts.any} onChange={updateAny} />
+        <Stepper label="C" colors={['C']} value={counts.c} onChange={updateC} />
+        <Stepper label="Any" colors={COLOR_WHEEL} value={counts.any} onChange={updateAny} />
       </div>
 
       <button
@@ -227,7 +228,7 @@ function ComboGroup({ title, combos, counts, onChange }: ComboGroupProps) {
               key={key}
               label={key}
               compact
-              swatchStyle={{ background: comboSwatchBackground(combo) }}
+              colors={combo}
               value={counts[key] ?? 0}
               onChange={(delta) => onChange(key, delta)}
             />
@@ -242,18 +243,17 @@ interface StepperProps {
   label: string;
   value: number;
   onChange: (delta: number) => void;
-  className?: string;
-  swatchStyle?: { background: string };
+  colors: ReadonlyArray<Color | 'C'>;
   compact?: boolean;
 }
 
-function Stepper({ label, value, onChange, className, swatchStyle, compact }: StepperProps) {
+function Stepper({ label, value, onChange, colors, compact }: StepperProps) {
   return (
-    <div className={['stepper', className, compact ? 'stepper-compact' : ''].filter(Boolean).join(' ')}>
-      <div className="stepper-top">
-        <span className="stepper-swatch" style={swatchStyle} aria-hidden="true" />
-        <span className="stepper-label">{label}</span>
-      </div>
+    <div
+      className={['stepper', compact ? 'stepper-compact' : ''].filter(Boolean).join(' ')}
+      style={{ background: manaFillBackground(colors) }}
+    >
+      <span className="stepper-label">{label}</span>
       <button
         type="button"
         className="stepper-btn stepper-btn-up"
