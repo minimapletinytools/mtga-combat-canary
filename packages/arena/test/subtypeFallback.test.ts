@@ -23,6 +23,61 @@ describe('subtypesToProducedMana', () => {
     expect(subtypesToProducedMana(['SubType_Forest', 'SubType_Forest'])).toEqual(['G']);
     expect(subtypesToProducedMana([])).toEqual([]);
   });
+
+  it('maps mana tokens: Treasure/Gold to any color, Powerstone to C', () => {
+    expect(subtypesToProducedMana(['SubType_Treasure'])).toEqual(['W', 'U', 'B', 'R', 'G']);
+    expect(subtypesToProducedMana(['SubType_Gold'])).toEqual(['W', 'U', 'B', 'R', 'G']);
+    expect(subtypesToProducedMana(['SubType_Powerstone'])).toEqual(['C']);
+    // Non-mana tokens stay non-sources.
+    expect(subtypesToProducedMana(['SubType_Clue'])).toEqual([]);
+    expect(subtypesToProducedMana(['SubType_Food'])).toEqual([]);
+    expect(subtypesToProducedMana(['SubType_Blood'])).toEqual([]);
+  });
+});
+
+describe('treasure tokens as opponent mana sources', () => {
+  // Object shape copied from a real Player.log treasure (2026-08-19):
+  // GameObjectType_Token / CardType_Artifact / SubType_Treasure, zone 28.
+  const treasure = (instanceId: number, extra: Record<string, unknown> = {}) => ({
+    instanceId,
+    grpId: 103595,
+    type: 'GameObjectType_Token',
+    zoneId: 28,
+    visibility: 'Visibility_Public',
+    ownerSeatId: 2,
+    controllerSeatId: 2,
+    cardTypes: ['CardType_Artifact'],
+    subtypes: ['SubType_Treasure'],
+    ...extra,
+  });
+
+  it('derives any-color sources from untapped treasures, skipping tapped ones', () => {
+    const tracker = new GameStateTracker();
+    tracker.applyEvent({
+      greToClientMessages: [
+        {
+          type: 'GREMessageType_GameStateMessage',
+          systemSeatIds: [1],
+          gameStateMessage: {
+            type: 'GameStateType_Full',
+            zones: [{ zoneId: 28, type: 'ZoneType_Battlefield', visibility: 'Visibility_Public' }],
+            gameObjects: [treasure(232), treasure(233, { isTapped: true })],
+          },
+        },
+      ],
+    });
+
+    // Token grpIds never resolve through the Scryfall map — empty map here.
+    const composite = (grpId: number) => {
+      const subtypes = tracker.lookupSubtypes(grpId);
+      if (subtypes === undefined) return undefined;
+      const colors = subtypesToProducedMana(subtypes);
+      return colors.length > 0 ? colors : undefined;
+    };
+
+    const mana = deriveOpenMana(tracker.getState(), composite, 'opponent');
+    expect(mana).toEqual({ sources: [{ produces: ['W', 'U', 'B', 'R', 'G'] }] });
+  });
 });
 
 describe('subtype fallback against the real fixture', () => {

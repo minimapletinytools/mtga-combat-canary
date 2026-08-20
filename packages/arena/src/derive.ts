@@ -1,29 +1,42 @@
 import type { Color, ManaSource, OpenMana } from '@mtgatricks/core';
 import type { ProducedManaLookup, TrackerState } from './types.js';
 
-/** Basic land subtypes (from GRE gameObject.subtypes) → produced color. */
-const LAND_SUBTYPE_COLORS: Record<string, Color | 'C'> = {
-  SubType_Plains: 'W',
-  SubType_Island: 'U',
-  SubType_Swamp: 'B',
-  SubType_Mountain: 'R',
-  SubType_Forest: 'G',
-  SubType_Wastes: 'C',
+const ANY_COLOR: ReadonlyArray<Color> = ['W', 'U', 'B', 'R', 'G'];
+
+/** Mana produced per relevant subtype (from GRE gameObject.subtypes). */
+const SUBTYPE_MANA: Record<string, ReadonlyArray<Color | 'C'>> = {
+  // Basic land types (also covers typed nonbasics/duals).
+  SubType_Plains: ['W'],
+  SubType_Island: ['U'],
+  SubType_Swamp: ['B'],
+  SubType_Mountain: ['R'],
+  SubType_Forest: ['G'],
+  SubType_Wastes: ['C'],
+  // Mana tokens — these NEVER resolve through the Scryfall arena-id map,
+  // because token grpIds aren't indexed there. Treasure/Gold: one mana of any
+  // color (sacrifice cost is fine for a one-shot source).
+  SubType_Treasure: ANY_COLOR,
+  SubType_Gold: ANY_COLOR,
+  // Powerstone mana can only pay for artifact spells; counting it as C
+  // over-reports slightly — the right direction for a "what could they have"
+  // warning tool.
+  SubType_Powerstone: ['C'],
 };
 
 /**
- * Produced-mana fallback from land subtypes: covers every basic (and typed
- * nonbasic) land even when the Scryfall arena-id map lacks the printing —
- * Scryfall's arena_id coverage lags new sets. Empty array when the subtypes
- * carry no land types.
+ * Produced-mana fallback from subtypes: covers basic-typed lands and mana
+ * tokens even when the Scryfall arena-id map has no answer (its arena_id
+ * coverage lags new sets, and token grpIds are never in it). Empty array when
+ * the subtypes carry no mana-producing types.
  */
 export function subtypesToProducedMana(
   subtypes: readonly string[],
 ): ReadonlyArray<Color | 'C'> {
   const colors: (Color | 'C')[] = [];
   for (const subtype of subtypes) {
-    const color = LAND_SUBTYPE_COLORS[subtype];
-    if (color !== undefined && !colors.includes(color)) colors.push(color);
+    for (const color of SUBTYPE_MANA[subtype] ?? []) {
+      if (!colors.includes(color)) colors.push(color);
+    }
   }
   return colors;
 }
