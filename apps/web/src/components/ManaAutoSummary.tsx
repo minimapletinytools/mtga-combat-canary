@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { ArenaStatus, Color, OpenMana } from '@mtgatricks/core';
 import { summarizeOpenMana, type ManaSummaryKey } from '../manaSummary';
 import { manaFillBackground } from '../manaFill';
@@ -22,12 +23,15 @@ const STATUS_META: Record<ArenaStatus, { label: string; className: string }> = {
 interface ManaAutoSummaryProps {
   mana: OpenMana;
   status: ArenaStatus | null;
+  /** The auto/manual mode toggle, rendered right next to the status chip
+   * so it sits in the flow instead of a separate row above. */
+  toggleButton?: ReactNode;
 }
 
 /** Auto-mode counterpart to ManaInput: a read-only per-color breakdown of
  * the open mana detected via the Arena bridge, plus a tracking-status chip.
  * Rendered only when the bridge is present and auto mode is active. */
-export function ManaAutoSummary({ mana, status }: ManaAutoSummaryProps) {
+export function ManaAutoSummary({ mana, status, toggleButton }: ManaAutoSummaryProps) {
   const counts = summarizeOpenMana(mana);
   const total = mana.sources.length;
   const meta = status ? STATUS_META[status] : null;
@@ -38,6 +42,7 @@ export function ManaAutoSummary({ mana, status }: ManaAutoSummaryProps) {
         <h2>Open mana</h2>
         <div className="mana-auto-meta">
           {meta && <span className={`status-chip ${meta.className}`}>{meta.label}</span>}
+          {toggleButton}
           <span className="mana-total">
             {total} untapped source{total === 1 ? '' : 's'}
           </span>

@@ -7,7 +7,7 @@ import { BridgeManaProvider } from './bridgeManaProvider';
 import { SetPicker } from './components/SetPicker';
 import { ManaSection, type ManaMode } from './components/ManaSection';
 import { TrickList, type SortDirection } from './components/TrickList';
-import { BackgroundPicker } from './components/BackgroundPicker';
+import { Mascot } from './components/Mascot';
 
 // Persist only the last chosen set code. Deliberately not using
 // @mtgatricks/data's KVStore here — the UI stays dependency-light and this
@@ -140,7 +140,7 @@ export function App({ cardSource }: AppProps) {
 
   return (
     <>
-      <BackgroundPicker />
+      <Mascot />
       <div className="app">
       <header className="app-header">
         <h1>mtgatricks</h1>

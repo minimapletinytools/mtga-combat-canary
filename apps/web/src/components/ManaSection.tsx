@@ -20,10 +20,13 @@ interface ManaSectionProps {
  * exactly `<ManaInput hidden={false} />` — no toggle, no chip, no extra DOM
  * around it — identical to Phase 1's web behavior.
  *
- * With a bridge: a mode toggle appears; in auto mode the steppers are
- * hidden (not unmounted, so manual counts survive switching back) and a
- * read-only per-color summary + status chip is shown instead; in manual
- * mode it's today's steppers, exactly.
+ * With a bridge: a mode toggle appears, rendered inline in whichever variant
+ * is currently visible (next to the status chip in auto mode, next to the
+ * source count in manual mode) rather than as a separate row that pushes
+ * everything else down. In auto mode the steppers are hidden (not
+ * unmounted, so manual counts survive switching back) and a read-only
+ * per-color summary + status chip is shown instead; in manual mode it's
+ * today's steppers, exactly.
  */
 export function ManaSection({
   manualManaProvider,
@@ -35,21 +38,24 @@ export function ManaSection({
 }: ManaSectionProps) {
   const autoActive = bridgeManaProvider !== null && mode === 'auto';
 
+  const toggleButton = bridgeManaProvider && (
+    <button
+      type="button"
+      className="mode-toggle-btn"
+      onClick={() => onModeChange(mode === 'auto' ? 'manual' : 'auto')}
+    >
+      {mode === 'auto' ? 'Manual override' : 'Auto (MTGA)'}
+    </button>
+  );
+
   return (
     <>
-      {bridgeManaProvider && (
-        <div className="mana-mode-toggle-row">
-          <button
-            type="button"
-            className="mode-toggle-btn"
-            onClick={() => onModeChange(mode === 'auto' ? 'manual' : 'auto')}
-          >
-            {mode === 'auto' ? 'Manual override' : 'Auto (MTGA)'}
-          </button>
-        </div>
-      )}
-      <ManaInput manaProvider={manualManaProvider} hidden={autoActive} />
-      {autoActive && <ManaAutoSummary mana={mana} status={bridgeStatus} />}
+      <ManaInput
+        manaProvider={manualManaProvider}
+        hidden={autoActive}
+        toggleButton={autoActive ? null : toggleButton}
+      />
+      {autoActive && <ManaAutoSummary mana={mana} status={bridgeStatus} toggleButton={toggleButton} />}
     </>
   );
 }

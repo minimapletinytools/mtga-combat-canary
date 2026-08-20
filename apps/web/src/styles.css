@@ -23,7 +23,7 @@
      tuned toward each basic land's actual identity color (Plains/Island/
      Swamp/Mountain/Forest) — not the gold used for multicolor — at matched
      brightness across all five so white label text stays equally legible. */
-  --mana-w-fill: #5f5c50;
+  --mana-w-fill: #9d9a8e;
   --mana-u-fill: #256ba8;
   --mana-b-fill: #4d4159;
   --mana-r-fill: #b3392a;
@@ -62,43 +62,57 @@ body {
   gap: 1.5rem;
 }
 
-/* Easter egg: a chosen card tiled as a faint background wash. */
+/* Mascot: a chosen card shown full-size/opacity, fixed top-right. */
 
-.bg-layer {
+.mascot-panel {
   position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background-repeat: repeat;
-  background-size: 160px auto;
-  opacity: 0.2;
+  top: 12px;
+  right: 14px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.4rem;
 }
 
-.egg-footer {
-  position: fixed;
-  right: 8px;
-  bottom: 6px;
-  z-index: 2;
-  opacity: 0.35;
-  transition: opacity 0.15s ease;
+.mascot-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.3rem 0.7rem;
 }
 
-.egg-footer:hover,
-.egg-footer:focus-within {
-  opacity: 0.9;
+.mascot-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+  font-weight: 700;
 }
 
-.egg-select {
+.mascot-select {
   background: transparent;
   border: none;
-  color: var(--text-faint);
-  font-size: 0.65rem;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
   cursor: pointer;
-  padding: 2px 4px;
 }
 
-.egg-select:focus-visible {
+.mascot-select:focus-visible {
   outline: 1px solid var(--accent);
+}
+
+.mascot-image {
+  display: block;
+  width: 132px;
+  border-radius: 10px;
+  border: 1px solid var(--border-light);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
 }
 
 .app-header h1 {
@@ -254,6 +268,9 @@ button:focus-visible {
   flex-wrap: wrap;
   gap: 0.6rem;
   margin-bottom: 0.8rem;
+  /* Reserve room so the right-aligned chip/toggle/total group wraps onto
+     its own line instead of running under the fixed mascot panel. */
+  padding-right: 190px;
 }
 
 .mana-input h2 {
@@ -323,7 +340,7 @@ button:focus-visible {
   font-size: 0.8rem;
   letter-spacing: 0.01em;
   color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.75), 0 0 1px rgba(0, 0, 0, 0.9);
 }
 
 .stepper-btn {
@@ -359,7 +376,7 @@ button:focus-visible {
   font-size: 0.9rem;
   line-height: 1;
   color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.75), 0 0 1px rgba(0, 0, 0, 0.9);
 }
 
 /* Compact variant for the dual/tri-land steppers — same vertical layout,
@@ -426,21 +443,19 @@ button:focus-visible {
 }
 
 /* Bridge mana mode (WP9) — only ever rendered when window.mtgatricks
-   (the Electron bridge) is present; no effect on the plain web build. */
-
-.mana-mode-toggle-row {
-  display: flex;
-  justify-content: flex-end;
-}
+   (the Electron bridge) is present; no effect on the plain web build.
+   Rendered inline in the mana panel's header (next to the status chip in
+   auto mode, next to the source count in manual mode), sized to match. */
 
 .mode-toggle-btn {
   background: var(--bg-input);
   border: 1px solid var(--border-light);
   border-radius: 999px;
-  padding: 0.4rem 0.9rem;
-  font-size: 0.8rem;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
+  color: var(--text-dim);
 }
 
 .mode-toggle-btn:hover {

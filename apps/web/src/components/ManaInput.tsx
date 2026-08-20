@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type { Color, ManaSource, OpenMana } from '@mtgatricks/core';
 import type { ManualManaProvider } from '../manaProvider';
 import { manaFillBackground } from '../manaFill';
@@ -98,12 +98,16 @@ interface ManaInputProps {
    * preserved so switching back to manual mode doesn't reset anything.
    * Omitted (or false) renders byte-identical to Phase 1. */
   hidden?: boolean;
+  /** The auto/manual mode toggle, when a bridge exists — rendered inline in
+   * the header instead of a separate row above. Absent on the plain web
+   * build, so that case is unaffected. */
+  toggleButton?: ReactNode;
 }
 
 /** Steppers (0–12) for each basic color, colorless, and "any color" (for
  * flexible/unknown sources), plus an expandable section of dual and
  * tri-land sources. Feeds ManualManaProvider.set() on every change. */
-export function ManaInput({ manaProvider, hidden }: ManaInputProps) {
+export function ManaInput({ manaProvider, hidden, toggleButton }: ManaInputProps) {
   const [counts, setCounts] = useState<Counts>(initialCounts);
   const [expanded, setExpanded] = useState(false);
 
@@ -142,6 +146,7 @@ export function ManaInput({ manaProvider, hidden }: ManaInputProps) {
       <div className="mana-input-header">
         <h2>Open mana</h2>
         <div className="mana-input-header-actions">
+          {toggleButton}
           <span className="mana-total">
             {total} untapped source{total === 1 ? '' : 's'}
           </span>
