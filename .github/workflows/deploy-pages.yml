@@ -9,6 +9,7 @@ on:
       - 'apps/web/**'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
+      - 'package.json'
       - 'tsconfig.base.json'
       - '.github/workflows/deploy-pages.yml'
   workflow_dispatch:
