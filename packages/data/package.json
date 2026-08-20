@@ -1,0 +1,22 @@
+{
+  "name": "@mtgatricks/data",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@mtgatricks/core": "workspace:*",
+    "idb": "^8.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "vitest": "^3.0.0"
+  }
+}

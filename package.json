@@ -1,0 +1,13 @@
+{
+  "name": "mtgatricks",
+  "private": true,
+  "scripts": {
+    "test": "pnpm -r test",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "vitest": "^3.0.0"
+  }
+}
