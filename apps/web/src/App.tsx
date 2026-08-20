@@ -7,6 +7,7 @@ import { BridgeManaProvider } from './bridgeManaProvider';
 import { SetPicker } from './components/SetPicker';
 import { ManaSection, type ManaMode } from './components/ManaSection';
 import { TrickList, type SortDirection } from './components/TrickList';
+import { BackgroundPicker } from './components/BackgroundPicker';
 
 // Persist only the last chosen set code. Deliberately not using
 // @mtgatricks/data's KVStore here — the UI stays dependency-light and this
@@ -138,7 +139,9 @@ export function App({ cardSource }: AppProps) {
   const totalCount = computation?.status === 'ready' ? computation.results.length : 0;
 
   return (
-    <div className="app">
+    <>
+      <BackgroundPicker />
+      <div className="app">
       <header className="app-header">
         <h1>mtgatricks</h1>
         <p className="tagline">Pick a set, enter open mana, see every instant-speed trick.</p>
@@ -188,6 +191,7 @@ export function App({ cardSource }: AppProps) {
           </>
         )}
       </main>
-    </div>
+      </div>
+    </>
   );
 }
