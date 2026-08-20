@@ -19,22 +19,16 @@
   --rarity-special: #c084fc;
   --rarity-bonus: #4dd0a8;
 
-  --mana-w: #f0e9c6;
-  --mana-u: #4aa3e0;
-  --mana-b: #9b8bb4;
-  --mana-r: #e0584a;
-  --mana-g: #3fae6a;
-  --mana-c: #b9b9c2;
-
-  /* Deeper tones for full-box stepper fills (ManaInput) — the light swatch
-     colors above read fine as a small dot but don't leave enough contrast
-     for text sitting directly on top of a full-box fill. */
-  --mana-w-fill: #8a7434;
-  --mana-u-fill: #2f6ea8;
-  --mana-b-fill: #5c4b78;
-  --mana-r-fill: #a8402e;
-  --mana-g-fill: #2c7a4a;
-  --mana-c-fill: #55555f;
+  /* Mana colors used as full-box stepper fills (ManaInput, ManaAutoSummary),
+     tuned toward each basic land's actual identity color (Plains/Island/
+     Swamp/Mountain/Forest) — not the gold used for multicolor — at matched
+     brightness across all five so white label text stays equally legible. */
+  --mana-w-fill: #5f5c50;
+  --mana-u-fill: #256ba8;
+  --mana-b-fill: #4d4159;
+  --mana-r-fill: #b3392a;
+  --mana-g-fill: #237a4a;
+  --mana-c-fill: #55565f;
 }
 
 * {
@@ -281,35 +275,6 @@ button:focus-visible {
   border-radius: 10px;
   padding: 0.5rem 0.5rem 0.45rem;
   width: 64px;
-}
-
-.stepper.mana-w .stepper-swatch {
-  background: var(--mana-w);
-}
-.stepper.mana-u .stepper-swatch {
-  background: var(--mana-u);
-}
-.stepper.mana-b .stepper-swatch {
-  background: var(--mana-b);
-}
-.stepper.mana-r .stepper-swatch {
-  background: var(--mana-r);
-}
-.stepper.mana-g .stepper-swatch {
-  background: var(--mana-g);
-}
-.stepper.mana-c .stepper-swatch {
-  background: var(--mana-c);
-}
-.stepper.mana-any .stepper-swatch {
-  background: conic-gradient(
-    var(--mana-w),
-    var(--mana-u),
-    var(--mana-b),
-    var(--mana-r),
-    var(--mana-g),
-    var(--mana-w)
-  );
 }
 
 .stepper-label {

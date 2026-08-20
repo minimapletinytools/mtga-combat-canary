@@ -1,14 +1,15 @@
-import type { ArenaStatus, OpenMana } from '@mtgatricks/core';
+import type { ArenaStatus, Color, OpenMana } from '@mtgatricks/core';
 import { summarizeOpenMana, type ManaSummaryKey } from '../manaSummary';
+import { manaFillBackground } from '../manaFill';
 
-const SLOTS: { key: ManaSummaryKey; label: string; className: string }[] = [
-  { key: 'W', label: 'W', className: 'mana-w' },
-  { key: 'U', label: 'U', className: 'mana-u' },
-  { key: 'B', label: 'B', className: 'mana-b' },
-  { key: 'R', label: 'R', className: 'mana-r' },
-  { key: 'G', label: 'G', className: 'mana-g' },
-  { key: 'C', label: 'C', className: 'mana-c' },
-  { key: 'any', label: 'Any', className: 'mana-any' },
+const SLOTS: { key: ManaSummaryKey; label: string; colors: ReadonlyArray<Color | 'C'> }[] = [
+  { key: 'W', label: 'W', colors: ['W'] },
+  { key: 'U', label: 'U', colors: ['U'] },
+  { key: 'B', label: 'B', colors: ['B'] },
+  { key: 'R', label: 'R', colors: ['R'] },
+  { key: 'G', label: 'G', colors: ['G'] },
+  { key: 'C', label: 'C', colors: ['C'] },
+  { key: 'any', label: 'Any', colors: ['W', 'U', 'B', 'R', 'G'] },
 ];
 
 const STATUS_META: Record<ArenaStatus, { label: string; className: string }> = {
@@ -43,9 +44,12 @@ export function ManaAutoSummary({ mana, status }: ManaAutoSummaryProps) {
         </div>
       </div>
       <div className="mana-steppers">
-        {SLOTS.map(({ key, label, className }) => (
-          <div key={key} className={`stepper stepper-readonly ${className}`}>
-            <span className="stepper-swatch" aria-hidden="true" />
+        {SLOTS.map(({ key, label, colors }) => (
+          <div
+            key={key}
+            className="stepper stepper-readonly"
+            style={{ background: manaFillBackground(colors) }}
+          >
             <span className="stepper-label">{label}</span>
             <span className="stepper-value">{counts[key]}</span>
           </div>

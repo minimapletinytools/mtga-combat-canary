@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Color, ManaSource, OpenMana } from '@mtgatricks/core';
 import type { ManualManaProvider } from '../manaProvider';
+import { manaFillBackground } from '../manaFill';
 
 /** WUBRG — the standard color-pie order everything below is generated from. */
 const COLOR_WHEEL: readonly Color[] = ['W', 'U', 'B', 'R', 'G'];
@@ -36,29 +37,6 @@ const TRI_COMBOS = combosOf(3);
 
 function comboKey(colors: readonly Color[]): string {
   return colors.join('');
-}
-
-const MANA_FILL_VAR: Record<Color | 'C', string> = {
-  W: 'var(--mana-w-fill)',
-  U: 'var(--mana-u-fill)',
-  B: 'var(--mana-b-fill)',
-  R: 'var(--mana-r-fill)',
-  G: 'var(--mana-g-fill)',
-  C: 'var(--mana-c-fill)',
-};
-
-/** The whole stepper box's background: a solid fill for one color, or a
- * hard-edged split — tilted 20° off horizontal — for 2+ colors, so a dual
- * or tri-land box visibly shows a band of each of its colors. */
-function manaFillBackground(colors: ReadonlyArray<Color | 'C'>): string {
-  if (colors.length <= 1) {
-    return MANA_FILL_VAR[colors[0] ?? 'C'];
-  }
-  const n = colors.length;
-  const stops = colors
-    .map((c, i) => `${MANA_FILL_VAR[c]} ${(i / n) * 100}% ${((i + 1) / n) * 100}%`)
-    .join(', ');
-  return `linear-gradient(20deg, ${stops})`;
 }
 
 interface Counts {
