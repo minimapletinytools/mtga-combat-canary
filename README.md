@@ -83,9 +83,16 @@ See `PLAN.md` for the full architecture, pinned interfaces, and phase history.
   changes.
 - **Powerstone mana over-reports.** It's counted as `{C}` but really can't pay for
   nonartifact spells. Over-reporting is the deliberate direction for a warning tool.
-- **Untyped nonbasic lands from brand-new sets** can be missed until Scryfall backfills
-  `arena_id`s for the printing. Basic-typed lands and duals are covered by the subtype
-  fallback regardless.
+- **Dual/tri-lands without basic land types depend entirely on Scryfall's data.** The
+  subtype fallback only helps when the log itself flags a land with basic land
+  subtypes — shocklands (Steam Vents), the original ABUR duals (Tundra), battle lands
+  (Prairie Stream), and the Ikoria/Streets of New Capenna triomes (Zagoth Triome) all
+  carry real basic land types, so those are covered even before Scryfall indexes the
+  printing. Guildgates, checklands (Rootbound Crag), fastlands (Seachrome Coast), and
+  the original Khans tri-lands (Nomad Outpost) carry no basic land type at all, so
+  those rely entirely on the Scryfall arena-id map — if that specific printing isn't
+  indexed yet (brand-new set), the land is silently dropped as a source instead of
+  guessed at.
 - **Hasty mana dorks** may be briefly under-counted if Arena still flags them
   summoning-sick in the log (sickness only matters at activation time for tap
   abilities).
@@ -99,8 +106,6 @@ See `PLAN.md` for the full architecture, pinned interfaces, and phase history.
 - **The log format is unofficial** and has broken across Arena patches before. The app
   is built to degrade to manual mode, but tracking can silently lag a patch until the
   parser is updated.
-- **
-
 
 ## Maintenance and Contribution
 
