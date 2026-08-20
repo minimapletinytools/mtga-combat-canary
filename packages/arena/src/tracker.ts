@@ -11,6 +11,8 @@ interface TrackedObject {
   controllerSeatId: number;
   zoneId: number;
   tapped: boolean;
+  /** Creature with hasSummoningSickness — can't tap for mana this turn. */
+  summonSick: boolean;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -66,6 +68,11 @@ export class GameStateTracker {
   /** Subtypes last seen for a grpId (e.g. ['SubType_Mountain']), if any. */
   lookupSubtypes(grpId: number): readonly string[] | undefined {
     return this.grpSubtypes.get(grpId);
+  }
+
+  /** True when this instance is a summoning-sick creature (no mana taps). */
+  isSummonSickCreature(instanceId: number): boolean {
+    return this.objects.get(instanceId)?.summonSick === true;
   }
 
   /** Apply one GRE event; returns true if the tracked state changed. */
@@ -175,6 +182,7 @@ export class GameStateTracker {
             subtypes.filter((s): s is string => typeof s === 'string'),
           );
         }
+        const cardTypes = gameObject['cardTypes'];
         this.objects.set(instanceId, {
           instanceId,
           grpId,
@@ -183,6 +191,13 @@ export class GameStateTracker {
           zoneId: num(gameObject['zoneId']) ?? -1,
           // isTapped is present only when the permanent is tapped.
           tapped: gameObject['isTapped'] === true,
+          // hasSummoningSickness likewise appears only when true. Gate on
+          // creature-ness defensively: only creatures are barred from tapping
+          // for mana by sickness (lands/rocks tap immediately).
+          summonSick:
+            gameObject['hasSummoningSickness'] === true &&
+            Array.isArray(cardTypes) &&
+            cardTypes.includes('CardType_Creature'),
         });
       }
     }
@@ -223,11 +238,16 @@ export class GameStateTracker {
     return battlefield;
   }
 
-  /** Compact rendering of exactly what TrackerState exposes, for change detection. */
+  /**
+   * Compact rendering of the state that downstream derivation depends on, for
+   * change detection. Includes summon-sickness: a dork waking up changes the
+   * derivable open mana even when nothing in TrackerState itself moved.
+   */
   private signature(): string {
     let signature = `${this.localSeatId}`;
     for (const permanent of this.buildBattlefield()) {
-      signature += `|${permanent.instanceId},${permanent.grpId},${permanent.controllerSeatId},${permanent.tapped ? 1 : 0}`;
+      const sick = this.objects.get(permanent.instanceId)?.summonSick === true;
+      signature += `|${permanent.instanceId},${permanent.grpId},${permanent.controllerSeatId},${permanent.tapped ? 1 : 0},${sick ? 1 : 0}`;
     }
     return signature;
   }

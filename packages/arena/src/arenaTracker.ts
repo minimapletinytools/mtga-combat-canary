@@ -162,7 +162,12 @@ export class ArenaTracker {
   };
 
   private emitMana(): void {
-    const mana = deriveOpenMana(this.tracker.getState(), this.lookupProducedMana, this.track);
+    const state = this.tracker.getState();
+    // Summoning-sick creatures can't tap for mana — drop them before derivation.
+    const battlefield = state.battlefield.filter(
+      (p) => !this.tracker.isSummonSickCreature(p.instanceId),
+    );
+    const mana = deriveOpenMana({ ...state, battlefield }, this.lookupProducedMana, this.track);
     if (mana === null) return;
     if (this.lastMana !== null && sameMana(this.lastMana, mana)) return;
     this.lastMana = mana;

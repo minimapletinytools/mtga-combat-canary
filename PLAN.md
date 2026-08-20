@@ -338,9 +338,10 @@ steppers; absent → `ManualManaProvider`, byte-for-byte today's web behavior.
   block the UI.
 - Requires Options → Account → Detailed Logs (Plugin Support) in Arena (verified
   enabled on this machine; real logs available as fixture material).
-- v1 simplifications: summon-sick mana creatures still count as sources; activation
-  costs beyond tapping are ignored; opponent lands only known once played (public
-  info). Fine for the tricks use case.
+- v1 simplifications: activation costs beyond tapping are ignored; opponent lands
+  only known once played (public info). Summon-sick creatures are excluded via the
+  gameObject `hasSummoningSickness` flag (creatures only — lands/rocks tap
+  immediately). Fine for the tricks use case.
 - Log fixtures committed to the repo must have identity fields stripped
   (account ids, screen names) — scrub before committing.
 
