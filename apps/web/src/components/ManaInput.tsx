@@ -34,11 +34,16 @@ function buildOpenMana(counts: Counts): OpenMana {
 
 interface ManaInputProps {
   manaProvider: ManualManaProvider;
+  /** WP9: when true, the steppers are hidden (auto/bridge mode is active)
+   * without unmounting — counts and the ManualManaProvider subscription are
+   * preserved so switching back to manual mode doesn't reset anything.
+   * Omitted (or false) renders byte-identical to Phase 1. */
+  hidden?: boolean;
 }
 
 /** Steppers (0–12) for each basic color, colorless, and "any color" (for
  * flexible/unknown sources). Feeds ManualManaProvider.set() on every change. */
-export function ManaInput({ manaProvider }: ManaInputProps) {
+export function ManaInput({ manaProvider, hidden }: ManaInputProps) {
   const [counts, setCounts] = useState<Counts>(INITIAL_COUNTS);
 
   // Push to the provider from an effect — calling it inside the setCounts
@@ -54,7 +59,7 @@ export function ManaInput({ manaProvider }: ManaInputProps) {
   const total = Object.values(counts).reduce((sum, n) => sum + n, 0);
 
   return (
-    <section className="mana-input">
+    <section className="mana-input" hidden={hidden}>
       <div className="mana-input-header">
         <h2>Open mana</h2>
         <span className="mana-total">{total} untapped source{total === 1 ? '' : 's'}</span>

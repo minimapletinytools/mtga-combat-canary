@@ -277,6 +277,86 @@ button:focus-visible {
   font-weight: 600;
 }
 
+/* Bridge mana mode (WP9) — only ever rendered when window.mtgatricks
+   (the Electron bridge) is present; no effect on the plain web build. */
+
+.mana-mode-toggle-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.mode-toggle-btn {
+  background: var(--bg-input);
+  border: 1px solid var(--border-light);
+  border-radius: 999px;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mode-toggle-btn:hover {
+  background: #2a2a34;
+  border-color: var(--accent);
+}
+
+.mana-auto-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.stepper-readonly {
+  cursor: default;
+}
+
+.stepper-readonly .stepper-value {
+  min-width: 1.8em;
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.status-chip::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.status-chip-tracking {
+  background: #10291a;
+  border-color: #1f6b3c;
+  color: #4dd08a;
+}
+
+.status-chip-no-log {
+  background: #1c1c22;
+  border-color: var(--border-light);
+  color: var(--text-dim);
+}
+
+.status-chip-stale {
+  background: #2a2210;
+  border-color: #6b5518;
+  color: #f0d98c;
+}
+
+.status-chip-error {
+  background: #2a1414;
+  border-color: #6b2424;
+  color: #f0a3a3;
+}
+
 /* Status line */
 
 .status-line {

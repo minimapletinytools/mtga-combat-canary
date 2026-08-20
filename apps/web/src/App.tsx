@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { Card, OpenMana, SetInfo, TrickResult } from '@mtgatricks/core';
+import type { ArenaStatus, Card, OpenMana, SetInfo, TrickResult } from '@mtgatricks/core';
 import { findTricks, sortTricks } from '@mtgatricks/core';
 import type { CardSource } from './cardSource';
 import { ManualManaProvider } from './manaProvider';
+import { BridgeManaProvider } from './bridgeManaProvider';
 import { SetPicker } from './components/SetPicker';
-import { ManaInput } from './components/ManaInput';
+import { ManaSection, type ManaMode } from './components/ManaSection';
 import { TrickList, type SortDirection } from './components/TrickList';
 
 // Persist only the last chosen set code. Deliberately not using
@@ -22,8 +23,19 @@ interface AppProps {
 }
 
 export function App({ cardSource }: AppProps) {
-  const [manaProvider] = useState(() => new ManualManaProvider());
+  const [manualManaProvider] = useState(() => new ManualManaProvider());
+  // WP9 seam: window.mtgatricks is only ever present in the Electron
+  // desktop build (preload-injected); undefined in a plain browser. The
+  // bridge object's identity is stable for the app's lifetime, so reading
+  // it once here to decide whether to construct a BridgeManaProvider at all
+  // is safe — when absent, nothing below this line ever touches it again.
+  const [bridgeManaProvider] = useState(() => {
+    const bridge = window.mtgatricks;
+    return bridge ? new BridgeManaProvider(bridge) : null;
+  });
+  const [mode, setMode] = useState<ManaMode>('auto');
   const [mana, setMana] = useState<OpenMana>({ sources: [] });
+  const [bridgeStatus, setBridgeStatus] = useState<ArenaStatus | null>(null);
 
   const [sets, setSets] = useState<SetInfo[] | null>(null);
   const [loadingSets, setLoadingSets] = useState(true);
@@ -36,7 +48,19 @@ export function App({ cardSource }: AppProps) {
 
   const [direction, setDirection] = useState<SortDirection>('common-first');
 
-  useEffect(() => manaProvider.subscribe((next) => setMana(next ?? { sources: [] })), [manaProvider]);
+  // The active provider is the bridge's in auto mode (only possible when a
+  // bridge exists); manual otherwise. With no bridge, activeProvider is
+  // always manualManaProvider — same subscription as Phase 1.
+  const activeManaProvider = bridgeManaProvider && mode === 'auto' ? bridgeManaProvider : manualManaProvider;
+  useEffect(
+    () => activeManaProvider.subscribe((next) => setMana(next ?? { sources: [] })),
+    [activeManaProvider],
+  );
+
+  useEffect(() => {
+    if (!bridgeManaProvider) return;
+    return bridgeManaProvider.subscribeStatus(setBridgeStatus);
+  }, [bridgeManaProvider]);
 
   // Load the set list once, then default to the last-used set (if it still
   // exists) or the newest one.
@@ -130,7 +154,14 @@ export function App({ cardSource }: AppProps) {
 
       {cardsError && <div className="banner banner-error">Could not load set cards: {cardsError}</div>}
 
-      <ManaInput manaProvider={manaProvider} />
+      <ManaSection
+        manualManaProvider={manualManaProvider}
+        bridgeManaProvider={bridgeManaProvider}
+        mana={mana}
+        bridgeStatus={bridgeStatus}
+        mode={mode}
+        onModeChange={setMode}
+      />
 
       <main>
         {!computation ? (

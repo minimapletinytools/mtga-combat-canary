@@ -56,6 +56,8 @@ export interface Card {
   image_uris?: { normal: string; small: string };
   games: string[];           // includes "arena" if on Arena
   scryfall_uri: string;
+  arena_id?: number;         // Arena grpId for this printing, when known
+  produced_mana?: string[];  // mana this card can produce (Scryfall field)
 }
 
 export interface SetInfo {
@@ -75,8 +77,17 @@ export interface TrickResult {
   castability: CastabilityResult;
 }
 
-/** Phase-2 seam. Manual provider now; WebSocket provider later. */
+/** Phase-2 seam. Manual provider on the web; Electron bridge provider on desktop. */
 export interface OpenManaProvider {
   /** cb fires with new open mana, or null when the source is unavailable. */
   subscribe(cb: (mana: OpenMana | null) => void): () => void;
+}
+
+/** Arena log-tracking status (Phase 2). */
+export type ArenaStatus = 'tracking' | 'no-log' | 'log-stale' | 'parse-error';
+
+/** Bridge surface the Electron preload exposes as `window.mtgatricks` (Phase 2). */
+export interface ArenaBridge {
+  onOpenMana(cb: (mana: OpenMana) => void): () => void;
+  onStatus(cb: (status: ArenaStatus) => void): () => void;
 }

@@ -3,7 +3,7 @@
 Companion app for MTG / MTG Arena: pick a set, enter the opponent's open mana, and see
 every card they could cast at instant speed (instants + flash), grouped by rarity.
 
-## Run
+## Run (web)
 
 ```sh
 pnpm install
@@ -17,6 +17,22 @@ LIVE_SCRYFALL=1 pnpm --filter @mtgatricks/data exec vitest run test/live.integra
 The web app is fully static — card data comes from the Scryfall API in the browser and
 is cached in IndexedDB (a set is fetched once, then works offline). Deploy `apps/web/dist`
 to any static host.
+
+## Run (desktop, with MTGA auto-tracking)
+
+```sh
+pnpm -r build                            # builds core/arena/data + web dist + desktop
+pnpm --filter @mtgatricks/desktop start  # launches the Electron app
+```
+
+The desktop app is the same UI plus automatic open-mana tracking: it tails MTG Arena's
+`Player.log` (enable **Options → Account → Detailed Logs (Plugin Support)** in Arena)
+and shows the opponent's untapped mana live, with a status chip and a manual-override
+toggle. First launch downloads Scryfall's bulk card data once (~100MB) to build the
+Arena-id → produced-mana map, cached under the app's user-data dir. Printings Scryfall
+doesn't know yet (new sets) fall back to land subtypes read from the log, so basics and
+typed duals always count. Dev mode: `MTGATRICKS_DEV_URL=http://localhost:5173
+pnpm --filter @mtgatricks/desktop start` against a running vite dev server.
 
 ## Layout
 

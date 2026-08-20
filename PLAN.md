@@ -274,12 +274,90 @@ Notes for implementers: `packages/core` must stay dependency-free and browser/no
 agnostic — this is the code Phase 2's companion process will also import. Do not add
 platform APIs to it. Do not invent extra fields on the pinned types.
 
-## Phase 2 (context only — do not build now)
+## Phase 2 — standalone Electron app with MTGA log integration
 
-`apps/companion`: Node process that serves `apps/web/dist`, tails MTGA `Player.log`
-(detailed logs enabled), reconstructs untapped mana sources from GameStateMessage
-zones/gameObjects + tap annotations cross-referenced against the cached card DB's
-produced-mana data, and broadcasts `OpenMana` JSON over a localhost WebSocket. The web
-app's `WebSocketManaProvider` (implements `OpenManaProvider`) auto-connects when the
-page is served from localhost. Log format is unofficial and patch-fragile — parser must
-degrade gracefully to manual mode.
+Decision (supersedes the earlier local-companion-process sketch): Phase 2 is a
+standalone **Electron** desktop app. The web deployment stays exactly as Phase 1 —
+the only web-side change is an inert provider-detection shim (WP9) that does nothing
+when the Electron bridge is absent. All MTGA integration lives in the desktop build.
+
+### Architecture
+
+`apps/desktop` (Electron, new):
+- **main process** (Node): creates the BrowserWindow, locates and tails
+  `Player.log`, feeds `packages/arena`'s parser, derives `OpenMana` for the chosen
+  player (default: opponent — the "what tricks could they have" use case), pushes
+  updates over IPC. Also owns the arena-id card mapping (WP7) on the filesystem.
+- **preload** (contextBridge, contextIsolation on, nodeIntegration off): exposes
+  `window.mtgatricks = { onOpenMana(cb): unsubscribe, onStatus(cb): unsubscribe }`
+  where status is `'tracking' | 'no-log' | 'log-stale' | 'parse-error'`. Nothing
+  else crosses the bridge.
+- **renderer**: loads `apps/web`'s built `dist/` via `file://` (requires
+  `base: './'` in the web vite config — harmless for web hosting). Dev mode loads
+  the vite dev server URL instead. No desktop-specific UI code.
+
+`packages/arena` (new): the parsing/derivation brain, structured so everything
+except the file tailer is pure and fixture-testable:
+- **chunk parser**: raw appended log text → stream of GRE JSON payloads
+  (`greToClientEvent` → `greToClientMessages[]`, type `GameStateMessage`). Must
+  tolerate interleaved non-JSON lines and split/partial writes.
+- **state tracker**: merge full/delta GameStateMessages — `gameObjects`, `zones`
+  (battlefield zone), `diffDeletedInstanceIds` (purge or you get phantom cards),
+  `AnnotationType_TappedUntappedPermanent` — into per-player battlefield state:
+  `{ instanceId, grpId, controllerSeatId, tapped }[]`. Also track which seat is the
+  local player (from match start messages) so "opponent" is well-defined.
+- **mana derivation**: battlefield state + a `(grpId) => producedMana` lookup →
+  `OpenMana` (each untapped permanent with nonempty produced mana = one
+  `ManaSource` with `produces` = its produced colors).
+- **tailer** (Node-only module, kept separate from the pure parts): follow
+  `Player.log` by byte position; detect truncation (Arena empties the log on
+  launch) and reset; macOS path `~/Library/Logs/Wizards Of The Coast/MTGA/`,
+  Windows path `%LOCALAPPDATA%Low\Wizards Of The Coast\MTGA\`.
+
+### grpId → produced mana (WP7)
+
+Arena logs identify cards by `grpId`; Scryfall exposes this as `arena_id`. The
+desktop main process downloads Scryfall bulk **default_cards** once (URL discovered
+via `/bulk-data`), streams it, keeps only `{ arena_id, name, produced_mana }` for
+cards with an `arena_id`, and caches that compact map as JSON in Electron
+`userData` (few MB; refresh on demand or when a grpId misses). Add optional
+`arena_id?: number` and `produced_mana?: string[]` to the pinned `Card` type —
+additive, web ignores them.
+
+### UI seam (WP9, the only web change)
+
+At startup `apps/web` checks `window.mtgatricks`: present → `BridgeManaProvider`
+(implements the existing `OpenManaProvider`) in **auto mode**, with a visible
+tracking-status chip and a manual-override toggle that switches back to the
+steppers; absent → `ManualManaProvider`, byte-for-byte today's web behavior.
+
+### Known fragility / fallbacks
+
+- The log format is unofficial and has broken across Arena patches. Any parse
+  failure must degrade to status `parse-error` + manual mode — never crash, never
+  block the UI.
+- Requires Options → Account → Detailed Logs (Plugin Support) in Arena (verified
+  enabled on this machine; real logs available as fixture material).
+- v1 simplifications: summon-sick mana creatures still count as sources; activation
+  costs beyond tapping are ignored; opponent lands only known once played (public
+  info). Fine for the tricks use case.
+- Log fixtures committed to the repo must have identity fields stripped
+  (account ids, screen names) — scrub before committing.
+
+### Work packages
+
+- **WP6** `packages/arena`: chunk parser + state tracker + derivation, tested
+  against real captured Player.log excerpts (scrubbed). The riskiest WP — the log
+  format is folklore, not spec; budget for iterating against the local fixtures.
+- **WP7** arena-id mapping: bulk default_cards ingestion + compact map + cache
+  (desktop main), `arena_id`/`produced_mana` added to `Card` mapping in
+  packages/data.
+- **WP8** `apps/desktop`: Electron main/preload/window, IPC plumbing, loads web
+  dist (`base: './'`), dev-mode loading, electron-builder config stub.
+- **WP9** `apps/web`: BridgeManaProvider + auto/manual toggle + status chip.
+- **WP10** integration + packaging (electron-builder, macOS dmg first; Windows
+  target configured but built on demand).
+
+Order: WP6 and WP7 in parallel first; WP8 and WP9 in parallel after; WP10 last.
+WP6's fixture extraction (from the local Player.log) should happen before fan-out
+so the format assumptions are grounded in reality.

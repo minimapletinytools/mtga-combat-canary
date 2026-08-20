@@ -1,5 +1,5 @@
 {
-  "name": "@mtgatricks/core",
+  "name": "@mtgatricks/arena",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -14,7 +14,11 @@
     "typecheck": "tsc --noEmit",
     "build": "tsc -p tsconfig.build.json"
   },
+  "dependencies": {
+    "@mtgatricks/core": "workspace:*"
+  },
   "devDependencies": {
+    "@types/node": "^22.0.0",
     "typescript": "^5.6.0",
     "vitest": "^3.0.0"
   }

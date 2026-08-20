@@ -1,5 +1,5 @@
-import type { Card, OpenMana, Rarity, TrickResult } from './types';
-import { canCast, parseManaCost } from './mana';
+import type { Card, OpenMana, Rarity, TrickResult } from './types.js';
+import { canCast, parseManaCost } from './mana.js';
 
 export interface InstantSpeedFace {
   faceName: string;

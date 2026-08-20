@@ -1,4 +1,4 @@
-import type { CastabilityResult, Color, ManaSource, OpenMana, ParsedCost, Pip } from './types';
+import type { CastabilityResult, Color, ManaSource, OpenMana, ParsedCost, Pip } from './types.js';
 
 const COLORS: ReadonlyArray<Color> = ['W', 'U', 'B', 'R', 'G'];
 
