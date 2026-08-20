@@ -70,3 +70,37 @@ export function deriveOpenMana(
   }
   return { sources };
 }
+
+/**
+ * Count untapped, tracked-player-controlled LAND permanents whose produced
+ * mana could NOT be resolved (neither the Scryfall arena-id map nor the
+ * subtype fallback had an answer) — i.e. "this should make mana, but we
+ * don't know what." Scoped to lands specifically because that's the one
+ * card type we can positively identify as "should produce mana" straight
+ * from the log's `cardTypes`, without guessing at arbitrary creatures'/
+ * artifacts' oracle text. Returns 0 while the local seat is unknown, same
+ * as deriveOpenMana returning null.
+ *
+ * Note: `producedMana` returning `undefined` (no data at all) is what counts
+ * — an explicit `[]` (a confident "this land makes no mana", e.g. Maze's
+ * End) is a real answer, not an unresolved one, so it does NOT count.
+ */
+export function countUnresolvedLandMana(
+  state: TrackerState,
+  producedMana: ProducedManaLookup,
+  track: 'opponent' | 'local',
+): number {
+  const localSeatId = state?.localSeatId;
+  if (localSeatId === null || localSeatId === undefined) return 0;
+
+  let count = 0;
+  for (const permanent of state.battlefield ?? []) {
+    if (permanent.tapped) continue;
+    if (!permanent.isLand) continue;
+    const isLocal = permanent.controllerSeatId === localSeatId;
+    if (track === 'local' ? !isLocal : isLocal) continue;
+
+    if (producedMana(permanent.grpId) === undefined) count += 1;
+  }
+  return count;
+}

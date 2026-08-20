@@ -448,6 +448,26 @@ button:focus-visible {
   gap: 0.4rem;
 }
 
+.dual-section-empty {
+  margin: 0;
+  color: var(--text-faint);
+  font-size: 0.82rem;
+  font-style: italic;
+}
+
+/* "Other" bucket (ManaAutoSummary only) — untapped opponent lands the
+   tracker saw but couldn't resolve a color for. Deliberately not a real
+   mana color: a neutral diagonal stripe rather than a solid/split fill. */
+.stepper-other {
+  background: repeating-linear-gradient(
+    45deg,
+    #3a3a46,
+    #3a3a46 6px,
+    #2c2c36 6px,
+    #2c2c36 12px
+  );
+}
+
 /* Bridge mana mode (WP9) — only ever rendered when window.mtgatricks
    (the Electron bridge) is present; no effect on the plain web build.
    Rendered inline in the mana panel's header (next to the status chip in

@@ -37,6 +37,7 @@ export function App({ cardSource }: AppProps) {
   const [mode, setMode] = useState<ManaMode>('auto');
   const [mana, setMana] = useState<OpenMana>({ sources: [] });
   const [bridgeStatus, setBridgeStatus] = useState<ArenaStatus | null>(null);
+  const [unresolvedCount, setUnresolvedCount] = useState<number | null>(null);
 
   const [sets, setSets] = useState<SetInfo[] | null>(null);
   const [loadingSets, setLoadingSets] = useState(true);
@@ -61,6 +62,11 @@ export function App({ cardSource }: AppProps) {
   useEffect(() => {
     if (!bridgeManaProvider) return;
     return bridgeManaProvider.subscribeStatus(setBridgeStatus);
+  }, [bridgeManaProvider]);
+
+  useEffect(() => {
+    if (!bridgeManaProvider) return;
+    return bridgeManaProvider.subscribeUnresolvedCount(setUnresolvedCount);
   }, [bridgeManaProvider]);
 
   // Load the set list once, then default to the last-used set (if it still
@@ -164,6 +170,7 @@ export function App({ cardSource }: AppProps) {
         bridgeManaProvider={bridgeManaProvider}
         mana={mana}
         bridgeStatus={bridgeStatus}
+        unresolvedCount={unresolvedCount}
         mode={mode}
         onModeChange={setMode}
       />

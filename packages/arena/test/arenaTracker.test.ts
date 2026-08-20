@@ -28,6 +28,7 @@ describe('ArenaTracker end-to-end', () => {
     tracker: ArenaTracker;
     mana: OpenMana[];
     statuses: ArenaStatus[];
+    unresolved: number[];
   }
 
   const harness = (
@@ -38,6 +39,7 @@ describe('ArenaTracker end-to-end', () => {
   ): Harness => {
     const mana: OpenMana[] = [];
     const statuses: ArenaStatus[] = [];
+    const unresolved: number[] = [];
     const instance = new ArenaTracker({
       logPath,
       producedMana: options.lookup ?? fixtureLookup,
@@ -47,7 +49,8 @@ describe('ArenaTracker end-to-end', () => {
     tracker = instance;
     instance.onOpenMana((m) => mana.push(m));
     instance.onStatus((s) => statuses.push(s));
-    return { tracker: instance, mana, statuses };
+    instance.onUnresolvedCount((n) => unresolved.push(n));
+    return { tracker: instance, mana, statuses, unresolved };
   };
 
   /** Writes the fixture into the log in `parts` appends, like Arena would. */
@@ -167,6 +170,9 @@ describe('ArenaTracker end-to-end', () => {
     instance.onStatus(() => {
       throw new Error('status listener exploded');
     });
+    instance.onUnresolvedCount(() => {
+      throw new Error('unresolved listener exploded');
+    });
     instance.onOpenMana((m) => seen.push(m));
 
     expect(() => instance.start()).not.toThrow();
@@ -208,6 +214,71 @@ describe('ArenaTracker end-to-end', () => {
     fs.appendFileSync(logPath, `${fixtureLines().slice(60).join('\n')}\n`);
     await delay(POLL * 8);
     expect(h.mana).toHaveLength(count);
+  });
+
+  it('reports 0 unresolved lands when every grpId is known (real fixture)', async () => {
+    fs.writeFileSync(logPath, `${fixtureLines().join('\n')}\n`);
+    const h = harness();
+    h.tracker.start();
+    await waitFor(() => h.mana.length > 0, 3000, 'mana');
+    expect(h.unresolved[h.unresolved.length - 1]).toBe(0);
+  });
+
+  // The real fixture's lands are all typed (Mountain/Forest/...), so the
+  // tracker's own subtype fallback resolves them regardless of what the
+  // "map" lookup knows — hiding a grpId from `producedMana` alone can't
+  // produce a genuinely-unresolved land there. To exercise that path for
+  // real, these use a small synthetic single-line log with an untapped
+  // opponent land that has neither a map entry nor a basic land subtype
+  // (e.g. a guildgate: `SubType_Gate`, not one of the five basics).
+  const UNRESOLVABLE_ZONE = { zoneId: 28, type: 'ZoneType_Battlefield', visibility: 'Visibility_Public' };
+  function unresolvableLandLogLine(): string {
+    return JSON.stringify({
+      greToClientEvent: {
+        greToClientMessages: [
+          {
+            type: 'GREMessageType_GameStateMessage',
+            systemSeatIds: [2],
+            gameStateMessage: {
+              type: 'GameStateType_Full',
+              zones: [UNRESOLVABLE_ZONE],
+              gameObjects: [
+                {
+                  instanceId: 1,
+                  grpId: 555,
+                  zoneId: 28,
+                  controllerSeatId: 1,
+                  cardTypes: ['CardType_Land'],
+                  subtypes: ['SubType_Gate'],
+                },
+              ],
+            },
+          },
+        ],
+      },
+    });
+  }
+
+  it('counts an untapped opponent land as unresolved when neither tier resolves it', async () => {
+    fs.writeFileSync(logPath, `${unresolvableLandLogLine()}\n`);
+    const h = harness({ lookup: () => undefined });
+    h.tracker.start();
+    await waitFor(() => h.unresolved.length > 0, 3000, 'unresolved count');
+    expect(h.unresolved[h.unresolved.length - 1]).toBe(1);
+    // The land is excluded from derived mana entirely (dropped, not guessed).
+    expect(h.mana[h.mana.length - 1]).toEqual({ sources: [] });
+  });
+
+  it('replays the current unresolved count to late subscribers', async () => {
+    fs.writeFileSync(logPath, `${unresolvableLandLogLine()}\n`);
+    const h = harness({ lookup: () => undefined });
+    h.tracker.start();
+    await waitFor(() => h.unresolved.includes(1), 3000, 'unresolved count');
+
+    const late: number[] = [];
+    const off = h.tracker.onUnresolvedCount((n) => late.push(n));
+    expect(late).toEqual([1]);
+    off();
   });
 
   it('ignores non-GRE noise interleaved with the log', async () => {

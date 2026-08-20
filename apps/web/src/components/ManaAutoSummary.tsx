@@ -1,7 +1,8 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { ArenaStatus, Color, OpenMana } from '@mtgatricks/core';
-import { summarizeOpenMana, type ManaSummaryKey } from '../manaSummary';
+import { summarizeOpenMana, summarizeCombos, type ManaSummaryKey } from '../manaSummary';
 import { manaFillBackground } from '../manaFill';
+import { ALL_COMBO_KEYS, splitComboKey } from '../manaCombos';
 
 const SLOTS: { key: ManaSummaryKey; label: string; colors: ReadonlyArray<Color | 'C'> }[] = [
   { key: 'W', label: 'W', colors: ['W'] },
@@ -23,18 +24,31 @@ const STATUS_META: Record<ArenaStatus, { label: string; className: string }> = {
 interface ManaAutoSummaryProps {
   mana: OpenMana;
   status: ArenaStatus | null;
-  /** The auto/manual mode toggle, rendered right next to the status chip
-   * so it sits in the flow instead of a separate row above. */
+  /** Untapped opponent lands whose colors couldn't be resolved from the log
+   * (neither the Scryfall map nor the subtype fallback had an answer). Null
+   * until the bridge's first report. Log-tailing only — there's no manual
+   * equivalent, since manual entry never has an "unknown" source. */
+  unresolvedCount: number | null;
   toggleButton?: ReactNode;
 }
 
 /** Auto-mode counterpart to ManaInput: a read-only per-color breakdown of
- * the open mana detected via the Arena bridge, plus a tracking-status chip.
- * Rendered only when the bridge is present and auto mode is active. */
-export function ManaAutoSummary({ mana, status, toggleButton }: ManaAutoSummaryProps) {
+ * the open mana detected via the Arena bridge (plus an "Other" bucket for
+ * unresolved lands), a read-only dual/tri-land section that auto-expands
+ * the moment one is detected, and the tracking-status chip. Rendered only
+ * when the bridge is present and auto mode is active. */
+export function ManaAutoSummary({ mana, status, unresolvedCount, toggleButton }: ManaAutoSummaryProps) {
   const counts = summarizeOpenMana(mana);
+  const comboCounts = summarizeCombos(mana);
   const total = mana.sources.length;
   const meta = status ? STATUS_META[status] : null;
+
+  const activeCombos = ALL_COMBO_KEYS.filter((key) => (comboCounts[key] ?? 0) > 0);
+  const hasCombo = activeCombos.length > 0;
+  // null = follow detection automatically; once the user clicks the toggle,
+  // their explicit choice wins until they click it again.
+  const [manualExpand, setManualExpand] = useState<boolean | null>(null);
+  const expanded = manualExpand ?? hasCombo;
 
   return (
     <section className="mana-input mana-auto-summary">
@@ -50,6 +64,7 @@ export function ManaAutoSummary({ mana, status, toggleButton }: ManaAutoSummaryP
           {meta && <span className={`status-chip ${meta.className}`}>{meta.label}</span>}
         </div>
       </div>
+
       <div className="mana-steppers">
         {SLOTS.map(({ key, label, colors }) => (
           <div
@@ -61,7 +76,49 @@ export function ManaAutoSummary({ mana, status, toggleButton }: ManaAutoSummaryP
             <span className="stepper-value">{counts[key]}</span>
           </div>
         ))}
+        {unresolvedCount !== null && (
+          <div
+            className="stepper stepper-readonly stepper-other"
+            title="Untapped opponent lands whose colors couldn't be resolved from the log"
+          >
+            <span className="stepper-label">Other</span>
+            <span className="stepper-value">{unresolvedCount}</span>
+          </div>
+        )}
       </div>
+
+      <button
+        type="button"
+        className="dual-toggle"
+        onClick={() => setManualExpand(!expanded)}
+        aria-expanded={expanded}
+      >
+        <span className={`dual-toggle-caret ${expanded ? 'expanded' : ''}`} aria-hidden="true">
+          ▸
+        </span>
+        Dual &amp; tri-lands
+      </button>
+
+      {expanded && (
+        <div className="dual-section">
+          {hasCombo ? (
+            <div className="mana-steppers mana-steppers-compact">
+              {activeCombos.map((key) => (
+                <div
+                  key={key}
+                  className="stepper stepper-readonly stepper-compact"
+                  style={{ background: manaFillBackground(splitComboKey(key)) }}
+                >
+                  <span className="stepper-label">{key}</span>
+                  <span className="stepper-value">{comboCounts[key]}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="dual-section-empty">No dual/tri-lands detected yet.</p>
+          )}
+        </div>
+      )}
     </section>
   );
 }

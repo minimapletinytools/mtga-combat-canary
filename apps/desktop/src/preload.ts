@@ -2,7 +2,7 @@
 // Compiled to dist/preload.mjs (ESM preload; renderer runs unsandboxed but
 // with contextIsolation on and nodeIntegration off).
 import { contextBridge, ipcRenderer } from 'electron';
-import { CHANNEL_OPEN_MANA, CHANNEL_STATUS } from './ipc.js';
+import { CHANNEL_OPEN_MANA, CHANNEL_STATUS, CHANNEL_UNRESOLVED_COUNT } from './ipc.js';
 
 function subscribe(channel: string) {
   return (cb: (payload: unknown) => void): (() => void) => {
@@ -18,4 +18,5 @@ function subscribe(channel: string) {
 contextBridge.exposeInMainWorld('mtgatricks', {
   onOpenMana: subscribe(CHANNEL_OPEN_MANA),
   onStatus: subscribe(CHANNEL_STATUS),
+  onUnresolvedCount: subscribe(CHANNEL_UNRESOLVED_COUNT),
 });

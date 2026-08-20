@@ -26,10 +26,8 @@ const p = (
   grpId: number,
   controllerSeatId: number,
   tapped: boolean,
-): BattlefieldPermanent => ({ instanceId, grpId, controllerSeatId, tapped });
-
-const isLand = (permanent: BattlefieldPermanent): boolean =>
-  Object.prototype.hasOwnProperty.call(FIXTURE_LANDS, permanent.grpId);
+  isLand: boolean,
+): BattlefieldPermanent => ({ instanceId, grpId, controllerSeatId, tapped, isLand });
 
 describe('GameStateTracker — full fixture replay', () => {
   it('learns the local seat from systemSeatIds', () => {
@@ -41,37 +39,47 @@ describe('GameStateTracker — full fixture replay', () => {
     // Verified against the fixture with an independent script: the last record
     // written for each instanceId, minus everything in diffDeletedInstanceIds.
     expect(replay().battlefield).toEqual([
-      p(208, 81182, 1, true), //  Mountain (opponent), tapped
-      p(210, 105182, 2, false), // Forest (local)
-      p(211, 103510, 2, false), // Rabbit creature (local)
-      p(214, 105174, 1, true), //  Plains (opponent), tapped
-      p(219, 105180, 2, false), // Mountain (local)
-      p(224, 103537, 1, false), // Equipment (opponent)
-      p(228, 103585, 1, true), //  Goblin Army token (opponent), tapped
-      p(231, 105182, 2, false), // Forest (local)
-      p(233, 81182, 1, true), //   Mountain (opponent), tapped
-      p(241, 103584, 1, false), // Soldier token (opponent)
-      p(249, 105182, 2, false), // Forest (local)
-      p(252, 103541, 1, true), //  Dwarf Bard (opponent), tapped
-      p(253, 105174, 1, true), //  Plains (opponent), tapped
-      p(254, 103467, 1, true), //  Dwarf Warrior (opponent), tapped
-      p(259, 103592, 1, false), // Equipment token (opponent)
-      p(263, 105178, 2, false), // Swamp (local)
-      p(270, 81182, 1, false), //  Mountain (opponent), UNTAPPED
+      p(208, 81182, 1, true, true), //   Mountain (opponent), tapped
+      p(210, 105182, 2, false, true), // Forest (local)
+      p(211, 103510, 2, false, false), // Rabbit creature (local)
+      p(214, 105174, 1, true, true), //   Plains (opponent), tapped
+      p(219, 105180, 2, false, true), // Mountain (local)
+      p(224, 103537, 1, false, false), // Equipment (opponent)
+      p(228, 103585, 1, true, false), //  Goblin Army token (opponent), tapped
+      p(231, 105182, 2, false, true), // Forest (local)
+      p(233, 81182, 1, true, true), //   Mountain (opponent), tapped
+      p(241, 103584, 1, false, false), // Soldier token (opponent)
+      p(249, 105182, 2, false, true), // Forest (local)
+      p(252, 103541, 1, true, false), //  Dwarf Bard (opponent), tapped
+      p(253, 105174, 1, true, true), //   Plains (opponent), tapped
+      p(254, 103467, 1, true, false), //  Dwarf Warrior (opponent), tapped
+      p(259, 103592, 1, false, false), // Equipment token (opponent)
+      p(263, 105178, 2, false, true), // Swamp (local)
+      p(270, 81182, 1, false, true), //   Mountain (opponent), UNTAPPED
     ]);
   });
 
   it('tracks five lands per seat, with only one opponent land untapped', () => {
+    // isLand here is the tracker's own derived field (from gameObject.cardTypes)
+    // — cross-checked against the exact-equality assertion above, which was
+    // hand-verified against FIXTURE_LANDS's independent grpId ground truth.
     const battlefield = replay().battlefield;
     const seat1 = battlefield.filter((x) => x.controllerSeatId === 1);
     const seat2 = battlefield.filter((x) => x.controllerSeatId === 2);
-    expect(seat1.filter(isLand)).toHaveLength(5);
-    expect(seat2.filter(isLand)).toHaveLength(5);
-    expect(seat1.filter((x) => isLand(x) && !x.tapped).map((x) => x.instanceId)).toEqual([270]);
-    expect(seat2.filter((x) => isLand(x) && x.tapped)).toHaveLength(0);
+    expect(seat1.filter((x) => x.isLand)).toHaveLength(5);
+    expect(seat2.filter((x) => x.isLand)).toHaveLength(5);
+    expect(seat1.filter((x) => x.isLand && !x.tapped).map((x) => x.instanceId)).toEqual([270]);
+    expect(seat2.filter((x) => x.isLand && x.tapped)).toHaveLength(0);
     expect(battlefield.filter((x) => x.tapped).map((x) => x.instanceId)).toEqual([
       208, 214, 228, 233, 252, 253, 254,
     ]);
+  });
+
+  it('battlefield isLand agrees with the independent FIXTURE_LANDS grpId ground truth', () => {
+    for (const permanent of replay().battlefield) {
+      const expected = Object.prototype.hasOwnProperty.call(FIXTURE_LANDS, permanent.grpId);
+      expect(permanent.isLand, `instance ${permanent.instanceId} (grpId ${permanent.grpId})`).toBe(expected);
+    }
   });
 
   it('purges destroyed permanents instead of keeping phantoms', () => {
@@ -103,24 +111,24 @@ describe('GameStateTracker — mid-match snapshots', () => {
   it('has only the opponent first land after line 10', () => {
     const state = replay(10);
     expect(state.localSeatId).toBe(2);
-    expect(state.battlefield).toEqual([p(208, 81182, 1, false)]);
+    expect(state.battlefield).toEqual([p(208, 81182, 1, false, true)]);
   });
 
   it('matches the hand-verified board after line 100', () => {
     const state = replay(100);
     expect(state.battlefield).toEqual([
-      p(208, 81182, 1, true),
-      p(210, 105182, 2, false),
-      p(211, 103510, 2, false),
-      p(214, 105174, 1, true),
-      p(219, 105180, 2, false),
-      p(220, 103520, 2, false),
-      p(224, 103537, 1, false),
-      p(228, 103585, 1, true),
-      p(231, 105182, 2, false),
-      p(233, 81182, 1, true),
-      p(234, 103390, 1, false),
-      p(241, 103584, 1, false),
+      p(208, 81182, 1, true, true),
+      p(210, 105182, 2, false, true),
+      p(211, 103510, 2, false, false),
+      p(214, 105174, 1, true, true),
+      p(219, 105180, 2, false, true),
+      p(220, 103520, 2, false, false),
+      p(224, 103537, 1, false, false),
+      p(228, 103585, 1, true, false),
+      p(231, 105182, 2, false, true),
+      p(233, 81182, 1, true, true),
+      p(234, 103390, 1, false, false),
+      p(241, 103584, 1, false, false),
     ]);
   });
 
@@ -170,7 +178,7 @@ describe('GameStateTracker — unit behaviour', () => {
         }),
       ),
     ).toBe(true);
-    expect(tracker.getState().battlefield).toEqual([p(1, 99, 1, true)]);
+    expect(tracker.getState().battlefield).toEqual([p(1, 99, 1, true, false)]);
     // A message with no game state at all changes nothing.
     expect(
       tracker.applyEvent({
@@ -223,7 +231,7 @@ describe('GameStateTracker — unit behaviour', () => {
         ],
       }),
     );
-    expect(tracker.getState().battlefield).toEqual([p(77, 99, 1, false)]);
+    expect(tracker.getState().battlefield).toEqual([p(77, 99, 1, false, false)]);
   });
 
   it('drops objects listed in diffDeletedInstanceIds', () => {
@@ -239,7 +247,7 @@ describe('GameStateTracker — unit behaviour', () => {
       }),
     );
     tracker.applyEvent(gameState({ type: 'GameStateType_Diff', diffDeletedInstanceIds: [1] }));
-    expect(tracker.getState().battlefield).toEqual([p(2, 98, 2, false)]);
+    expect(tracker.getState().battlefield).toEqual([p(2, 98, 2, false, false)]);
   });
 
   it('replaces state on GameStateType_Full and resets on a new game', () => {
@@ -326,7 +334,7 @@ describe('GameStateTracker — unit behaviour', () => {
       }),
     );
     const first = tracker.getState();
-    first.battlefield.push(p(999, 1, 1, false));
+    first.battlefield.push(p(999, 1, 1, false, false));
     expect(tracker.getState().battlefield).toHaveLength(1);
   });
 });

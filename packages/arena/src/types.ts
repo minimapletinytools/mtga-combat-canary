@@ -6,6 +6,10 @@ export interface BattlefieldPermanent {
   grpId: number;
   controllerSeatId: number;
   tapped: boolean;
+  /** From gameObject.cardTypes — lets derive.ts tell "a land whose colors we
+   * couldn't resolve" apart from "a nonland permanent that legitimately
+   * produces no mana" (e.g. a vanilla creature). */
+  isLand: boolean;
 }
 
 export interface TrackerState {

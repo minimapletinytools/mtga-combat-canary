@@ -1,7 +1,7 @@
 import * as fs from 'node:fs';
 import type { ArenaStatus, OpenMana } from '@mtgatricks/core';
 import { LineAssembler, extractGreEvent } from './chunker.js';
-import { deriveOpenMana, subtypesToProducedMana } from './derive.js';
+import { countUnresolvedLandMana, deriveOpenMana, subtypesToProducedMana } from './derive.js';
 import { GameStateTracker } from './tracker.js';
 import { LogTailer } from './tailer.js';
 import type { ArenaTrackerOptions } from './types.js';
@@ -43,9 +43,11 @@ export class ArenaTracker {
   private parseError = false;
   private sawGameState = false;
   private lastMana: OpenMana | null = null;
+  private lastUnresolvedCount: number | null = null;
 
   private readonly manaListeners = new Set<(mana: OpenMana) => void>();
   private readonly statusListeners = new Set<(status: ArenaStatus) => void>();
+  private readonly unresolvedListeners = new Set<(count: number) => void>();
 
   constructor(options: ArenaTrackerOptions) {
     this.options = options;
@@ -91,6 +93,16 @@ export class ArenaTracker {
     };
   }
 
+  /** Fires whenever the count of untapped, unresolvable-color opponent
+   * lands changes (surfaced in the UI as an "Other" bucket). */
+  onUnresolvedCount(cb: (count: number) => void): () => void {
+    this.unresolvedListeners.add(cb);
+    if (this.lastUnresolvedCount !== null) this.safe(() => cb(this.lastUnresolvedCount as number));
+    return () => {
+      this.unresolvedListeners.delete(cb);
+    };
+  }
+
   private fileExists(): boolean {
     try {
       return fs.statSync(this.options.logPath).isFile();
@@ -128,6 +140,7 @@ export class ArenaTracker {
     this.tracker.reset();
     this.sawGameState = false;
     this.lastMana = null;
+    this.lastUnresolvedCount = null;
     this.parseError = false;
     this.fileMissing = false;
     this.updateStatus();
@@ -145,6 +158,7 @@ export class ArenaTracker {
     this.tracker.reset();
     this.sawGameState = false;
     this.lastMana = null;
+    this.lastUnresolvedCount = null;
     this.updateStatus();
   }
 
@@ -167,11 +181,19 @@ export class ArenaTracker {
     const battlefield = state.battlefield.filter(
       (p) => !this.tracker.isSummonSickCreature(p.instanceId),
     );
-    const mana = deriveOpenMana({ ...state, battlefield }, this.lookupProducedMana, this.track);
-    if (mana === null) return;
-    if (this.lastMana !== null && sameMana(this.lastMana, mana)) return;
-    this.lastMana = mana;
-    for (const listener of [...this.manaListeners]) this.safe(() => listener(mana));
+    const filteredState = { ...state, battlefield };
+
+    const mana = deriveOpenMana(filteredState, this.lookupProducedMana, this.track);
+    if (mana !== null && (this.lastMana === null || !sameMana(this.lastMana, mana))) {
+      this.lastMana = mana;
+      for (const listener of [...this.manaListeners]) this.safe(() => listener(mana));
+    }
+
+    const unresolvedCount = countUnresolvedLandMana(filteredState, this.lookupProducedMana, this.track);
+    if (this.lastUnresolvedCount === null || this.lastUnresolvedCount !== unresolvedCount) {
+      this.lastUnresolvedCount = unresolvedCount;
+      for (const listener of [...this.unresolvedListeners]) this.safe(() => listener(unresolvedCount));
+    }
   }
 
   private updateStatus(): void {

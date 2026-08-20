@@ -11,6 +11,7 @@ interface ManaSectionProps {
   bridgeManaProvider: BridgeManaProvider | null;
   mana: OpenMana;
   bridgeStatus: ArenaStatus | null;
+  unresolvedCount: number | null;
   mode: ManaMode;
   onModeChange: (mode: ManaMode) => void;
 }
@@ -33,6 +34,7 @@ export function ManaSection({
   bridgeManaProvider,
   mana,
   bridgeStatus,
+  unresolvedCount,
   mode,
   onModeChange,
 }: ManaSectionProps) {
@@ -55,7 +57,14 @@ export function ManaSection({
         hidden={autoActive}
         toggleButton={autoActive ? null : toggleButton}
       />
-      {autoActive && <ManaAutoSummary mana={mana} status={bridgeStatus} toggleButton={toggleButton} />}
+      {autoActive && (
+        <ManaAutoSummary
+          mana={mana}
+          status={bridgeStatus}
+          unresolvedCount={unresolvedCount}
+          toggleButton={toggleButton}
+        />
+      )}
     </>
   );
 }

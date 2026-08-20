@@ -2,42 +2,9 @@ import { useEffect, useState, type ReactNode } from 'react';
 import type { Color, ManaSource, OpenMana } from '@mtgatricks/core';
 import type { ManualManaProvider } from '../manaProvider';
 import { manaFillBackground } from '../manaFill';
-
-/** WUBRG — the standard color-pie order everything below is generated from. */
-const COLOR_WHEEL: readonly Color[] = ['W', 'U', 'B', 'R', 'G'];
+import { COLOR_WHEEL, DUAL_COMBOS, TRI_COMBOS, comboKey } from '../manaCombos';
 
 const COLORS: { key: Color; label: string }[] = COLOR_WHEEL.map((key) => ({ key, label: key }));
-
-/** Every k-color subset of WUBRG: each combo's own letters are already in
- * wheel order (inner loop starts after the outer index), and the list of
- * combos itself comes out in wheel-lexicographic order — e.g. duals are
- * WU, WB, WR, WG, UB, UR, UG, BR, BG, RG, never "UW" or "GW". */
-function combosOf(k: number): Color[][] {
-  const out: Color[][] = [];
-  const current: Color[] = [];
-  function rec(start: number) {
-    if (current.length === k) {
-      out.push([...current]);
-      return;
-    }
-    for (let i = start; i < COLOR_WHEEL.length; i++) {
-      current.push(COLOR_WHEEL[i]!);
-      rec(i + 1);
-      current.pop();
-    }
-  }
-  rec(0);
-  return out;
-}
-
-/** The 10 two-color combinations (dual lands), e.g. ['W','U'] for Azorius. */
-const DUAL_COMBOS = combosOf(2);
-/** The 10 three-color combinations (tri-lands), e.g. ['W','U','B'] for Esper. */
-const TRI_COMBOS = combosOf(3);
-
-function comboKey(colors: readonly Color[]): string {
-  return colors.join('');
-}
 
 interface Counts {
   colors: Record<Color, number>;

@@ -5,6 +5,8 @@ const STATE_FULL = 'GameStateType_Full';
 const ZONE_BATTLEFIELD = 'ZoneType_Battlefield';
 const ANNOTATION_OBJECT_ID_CHANGED = 'AnnotationType_ObjectIdChanged';
 
+const CARD_TYPE_LAND = 'CardType_Land';
+
 interface TrackedObject {
   instanceId: number;
   grpId: number;
@@ -13,6 +15,7 @@ interface TrackedObject {
   tapped: boolean;
   /** Creature with hasSummoningSickness — can't tap for mana this turn. */
   summonSick: boolean;
+  isLand: boolean;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -198,6 +201,7 @@ export class GameStateTracker {
             gameObject['hasSummoningSickness'] === true &&
             Array.isArray(cardTypes) &&
             cardTypes.includes('CardType_Creature'),
+          isLand: Array.isArray(cardTypes) && cardTypes.includes(CARD_TYPE_LAND),
         });
       }
     }
@@ -231,6 +235,7 @@ export class GameStateTracker {
         grpId: object.grpId,
         controllerSeatId: object.controllerSeatId,
         tapped: object.tapped,
+        isLand: object.isLand,
       });
     }
     // Stable order so downstream diffing/derivation is deterministic.

@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ArenaStatus, OpenMana } from '@mtgatricks/core';
 import { ArenaTracker } from '@mtgatricks/arena';
-import { CHANNEL_OPEN_MANA, CHANNEL_STATUS } from './ipc.js';
+import { CHANNEL_OPEN_MANA, CHANNEL_STATUS, CHANNEL_UNRESOLVED_COUNT } from './ipc.js';
 import { loadArenaIdMap } from './arenaIds.js';
 import { resolvePlayerLogPath } from './logPath.js';
 
@@ -13,6 +13,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 // window) can recover it instead of waiting for the next tracker event.
 let latestMana: OpenMana | null = null;
 let latestStatus: ArenaStatus | null = null;
+let latestUnresolvedCount: number | null = null;
 
 let tracker: ArenaTracker | null = null;
 
@@ -44,6 +45,9 @@ function createWindow(): BrowserWindow {
     if (latestStatus !== null) {
       win.webContents.send(CHANNEL_STATUS, latestStatus);
     }
+    if (latestUnresolvedCount !== null) {
+      win.webContents.send(CHANNEL_UNRESOLVED_COUNT, latestUnresolvedCount);
+    }
   });
 
   return win;
@@ -60,6 +64,13 @@ function broadcastStatus(status: ArenaStatus): void {
   latestStatus = status;
   for (const win of BrowserWindow.getAllWindows()) {
     win.webContents.send(CHANNEL_STATUS, status);
+  }
+}
+
+function broadcastUnresolvedCount(count: number): void {
+  latestUnresolvedCount = count;
+  for (const win of BrowserWindow.getAllWindows()) {
+    win.webContents.send(CHANNEL_UNRESOLVED_COUNT, count);
   }
 }
 
@@ -89,6 +100,7 @@ async function setupTracker(): Promise<void> {
 
     newTracker.onOpenMana((mana) => broadcastOpenMana(mana));
     newTracker.onStatus((status) => broadcastStatus(status));
+    newTracker.onUnresolvedCount((count) => broadcastUnresolvedCount(count));
     newTracker.start();
   } catch (err) {
     console.error('[mtgatricks] failed to start arena tracker:', err);

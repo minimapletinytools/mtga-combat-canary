@@ -22,8 +22,12 @@ export class BridgeManaProvider implements OpenManaProvider {
   private status: ArenaStatus | null = null;
   private statusSubscribers = new Set<(status: ArenaStatus | null) => void>();
 
+  private unresolvedCount: number | null = null;
+  private unresolvedSubscribers = new Set<(count: number | null) => void>();
+
   private readonly unsubscribeMana: () => void;
   private readonly unsubscribeStatus: () => void;
+  private readonly unsubscribeUnresolved: () => void;
 
   constructor(bridge: ArenaBridge) {
     this.unsubscribeMana = bridge.onOpenMana((mana) => {
@@ -33,6 +37,10 @@ export class BridgeManaProvider implements OpenManaProvider {
     this.unsubscribeStatus = bridge.onStatus((status) => {
       this.status = status;
       for (const cb of this.statusSubscribers) cb(status);
+    });
+    this.unsubscribeUnresolved = bridge.onUnresolvedCount((count) => {
+      this.unresolvedCount = count;
+      for (const cb of this.unresolvedSubscribers) cb(count);
     });
   }
 
@@ -53,10 +61,21 @@ export class BridgeManaProvider implements OpenManaProvider {
     };
   }
 
+  /** Untapped opponent lands whose colors couldn't be resolved; null until
+   * the bridge's first onUnresolvedCount fires. Log-tailing only. */
+  subscribeUnresolvedCount(cb: (count: number | null) => void): () => void {
+    this.unresolvedSubscribers.add(cb);
+    cb(this.unresolvedCount);
+    return () => {
+      this.unresolvedSubscribers.delete(cb);
+    };
+  }
+
   /** Detach from the underlying bridge. Not currently called (the provider
    * lives for the app's lifetime) but kept for correctness/testability. */
   destroy(): void {
     this.unsubscribeMana();
     this.unsubscribeStatus();
+    this.unsubscribeUnresolved();
   }
 }

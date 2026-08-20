@@ -90,4 +90,7 @@ export type ArenaStatus = 'tracking' | 'no-log' | 'log-stale' | 'parse-error';
 export interface ArenaBridge {
   onOpenMana(cb: (mana: OpenMana) => void): () => void;
   onStatus(cb: (status: ArenaStatus) => void): () => void;
+  /** Untapped opponent lands whose colors couldn't be resolved (surfaced in
+   * the UI as an "Other" bucket) — log-tailing only, no manual-mode analog. */
+  onUnresolvedCount(cb: (count: number) => void): () => void;
 }
