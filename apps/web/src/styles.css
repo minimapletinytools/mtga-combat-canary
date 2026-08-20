@@ -49,9 +49,8 @@ body {
 }
 
 .app {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 2rem 1.5rem 4rem;
+  width: 100%;
+  padding: 2rem clamp(1rem, 3vw, 3rem) 4rem;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
@@ -98,6 +97,32 @@ body {
   color: #f0a3a3;
 }
 
+.banner-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: rgba(124, 158, 255, 0.08);
+  border-color: var(--accent);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--border-light);
+  border-top-color: var(--accent);
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .banner-detail {
   margin-top: 0.4rem;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -131,6 +156,20 @@ body {
   color: var(--text-dim);
   font-size: 0.88rem;
   font-style: italic;
+}
+
+.fetch-status {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.6rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: 10px;
+  background: rgba(124, 158, 255, 0.08);
+  border: 1px solid var(--accent);
+  color: var(--text);
+  font-size: 0.88rem;
+  font-weight: 600;
 }
 
 /* Form controls */
@@ -167,6 +206,8 @@ button:focus-visible {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.6rem;
   margin-bottom: 0.8rem;
 }
 
@@ -176,25 +217,64 @@ button:focus-visible {
   font-weight: 600;
 }
 
+.mana-input-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 .mana-total {
   color: var(--text-faint);
   font-size: 0.82rem;
 }
 
+.clear-all-btn {
+  background: var(--bg-input);
+  border: 1px solid var(--border-light);
+  border-radius: 999px;
+  padding: 0.3rem 0.8rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.clear-all-btn:hover:not(:disabled) {
+  background: #2a2a34;
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.clear-all-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .mana-steppers {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.7rem;
+  gap: 0.5rem;
 }
 
+/* Each stepper is a narrow vertical chip: swatch+label on top, then a
+   compact +/value/- stack — this (rather than side-by-side +/- buttons)
+   is what lets many steppers sit close together per row. */
 .stepper {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.55rem;
+  gap: 0.3rem;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 0.5rem 0.7rem;
+  padding: 0.5rem 0.5rem 0.45rem;
+  width: 64px;
+}
+
+.stepper-top {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
 }
 
 .stepper-swatch {
@@ -235,21 +315,15 @@ button:focus-visible {
 }
 
 .stepper-label {
-  font-weight: 600;
-  font-size: 0.85rem;
-  width: 1.6em;
-}
-
-.stepper-controls {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.01em;
 }
 
 .stepper-btn {
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
+  width: 100%;
+  height: 20px;
+  border-radius: 5px;
   border: 1px solid var(--border-light);
   background: var(--bg-input);
   cursor: pointer;
@@ -257,7 +331,8 @@ button:focus-visible {
   align-items: center;
   justify-content: center;
   line-height: 1;
-  font-size: 1rem;
+  font-size: 0.85rem;
+  padding: 0;
 }
 
 .stepper-btn:hover:not(:disabled) {
@@ -271,10 +346,79 @@ button:focus-visible {
 }
 
 .stepper-value {
-  min-width: 1.4em;
   text-align: center;
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+/* Compact variant for the dual/tri-land steppers — same vertical layout,
+   smaller footprint since there are up to 20 of them. */
+.stepper-compact {
+  width: 54px;
+  padding: 0.4rem 0.35rem 0.35rem;
+}
+
+.stepper-compact .stepper-label {
+  font-size: 0.68rem;
+}
+
+.stepper-compact .stepper-swatch {
+  width: 11px;
+  height: 11px;
+}
+
+/* Dual & tri-lands (expandable section) */
+
+.dual-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.9rem;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 0.85rem;
   font-weight: 600;
+  cursor: pointer;
+  padding: 0.2rem 0;
+}
+
+.dual-toggle:hover {
+  color: var(--text);
+}
+
+.dual-toggle-caret {
+  display: inline-block;
+  font-size: 0.7rem;
+  transition: transform 0.12s ease;
+}
+
+.dual-toggle-caret.expanded {
+  transform: rotate(90deg);
+}
+
+.dual-section {
+  margin-top: 0.7rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.combo-group h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+  font-weight: 700;
+}
+
+.mana-steppers-compact {
+  gap: 0.4rem;
 }
 
 /* Bridge mana mode (WP9) — only ever rendered when window.mtgatricks
@@ -306,12 +450,21 @@ button:focus-visible {
   gap: 0.6rem;
 }
 
+/* ManaAutoSummary's read-only pills predate the interactive stepper's
+   vertical layout (added for the +/- redesign) and keep their original
+   horizontal row — this overrides the new default just for them. */
 .stepper-readonly {
+  flex-direction: row;
+  align-items: center;
+  width: auto;
+  gap: 0.55rem;
+  padding: 0.5rem 0.7rem;
   cursor: default;
 }
 
 .stepper-readonly .stepper-value {
   min-width: 1.8em;
+  text-align: center;
 }
 
 .status-chip {
@@ -426,7 +579,7 @@ button:focus-visible {
 .card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1rem;
+  gap: 0.6rem;
 }
 
 .trick-card {

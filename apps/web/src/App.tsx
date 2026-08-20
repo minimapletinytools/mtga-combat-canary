@@ -88,12 +88,14 @@ export function App({ cardSource }: AppProps) {
     };
   }, [cardSource]);
 
-  // Fetch cards whenever the selected set changes.
+  // Fetch cards whenever the selected set changes. Clear the previous set's
+  // cards immediately so stale results never show while a new set loads.
   useEffect(() => {
     if (!selectedCode) return;
     let cancelled = false;
     setLoadingCards(true);
     setCardsError(null);
+    setCards(null);
     cardSource
       .getSetCards(selectedCode)
       .then((result) => {
@@ -164,7 +166,12 @@ export function App({ cardSource }: AppProps) {
       />
 
       <main>
-        {!computation ? (
+        {loadingCards ? (
+          <div className="banner banner-loading">
+            <span className="spinner" aria-hidden="true" />
+            Loading card data…
+          </div>
+        ) : !computation ? (
           <div className="banner banner-info">Pick a set to see possible tricks.</div>
         ) : computation.status === 'engine-not-ready' ? (
           <div className="banner banner-warning">

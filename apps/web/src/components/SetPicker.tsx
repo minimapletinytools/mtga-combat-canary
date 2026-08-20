@@ -8,10 +8,11 @@ interface SetPickerProps {
   loadingCards: boolean;
 }
 
-/** Dropdown of sets (newest first), plus a "downloading set…" state while
- * the chosen set's cards are being fetched. */
+/** Dropdown of sets (newest first), plus a prominent "downloading…" status
+ * while the chosen set's cards are being fetched. */
 export function SetPicker({ sets, selectedCode, onSelect, loadingSets, loadingCards }: SetPickerProps) {
   const sorted = sets ? [...sets].sort((a, b) => b.released_at.localeCompare(a.released_at)) : null;
+  const selectedName = sorted?.find((set) => set.code === selectedCode)?.name;
 
   return (
     <section className="set-picker">
@@ -33,7 +34,12 @@ export function SetPicker({ sets, selectedCode, onSelect, loadingSets, loadingCa
           ))}
         </select>
       )}
-      {loadingCards && <p className="loading-text">downloading set…</p>}
+      {loadingCards && (
+        <div className="fetch-status">
+          <span className="spinner" aria-hidden="true" />
+          Downloading {selectedName ?? 'set'} card data…
+        </div>
+      )}
     </section>
   );
 }

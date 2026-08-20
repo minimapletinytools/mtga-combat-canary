@@ -413,3 +413,39 @@ describe('canCast — realistic costs', () => {
     expect(castable('{W}{W}{W}{W}{W}{W}', ...big)).toBe(false);
   });
 });
+
+// Dual/tri-land sources (a source that can produce 2 or 3 specific colors,
+// e.g. an Azorius or Bant land) use the exact same ManaSource shape as the
+// "any color" 5-color source already covered above — the matching algorithm
+// is generic over produces.length, so no engine changes were needed to add
+// them to the UI. These lock that in.
+describe('canCast — dual and tri-land sources', () => {
+  it('an Azorius dual (WU) pays either color pip, but only one at a time', () => {
+    expect(castable('{W}', src('W', 'U'))).toBe(true);
+    expect(castable('{U}', src('W', 'U'))).toBe(true);
+    expect(castable('{W}{U}', src('W', 'U'))).toBe(false); // one source, two pips
+    expect(castable('{W}{U}', src('W', 'U'), src('W', 'U'))).toBe(true);
+  });
+
+  it('a Bant tri-land (WUG) satisfies any one of its three colors', () => {
+    expect(castable('{W}', src('W', 'U', 'G'))).toBe(true);
+    expect(castable('{U}', src('W', 'U', 'G'))).toBe(true);
+    expect(castable('{G}', src('W', 'U', 'G'))).toBe(true);
+    expect(castable('{B}', src('W', 'U', 'G'))).toBe(false);
+  });
+
+  it('a WUBRG cost needs five duals matched to five distinct colors', () => {
+    const wu = src('W', 'U');
+    const ub = src('U', 'B');
+    const br = src('B', 'R');
+    const rg = src('R', 'G');
+    const gw = src('G', 'W');
+    // A valid perfect matching exists (each dual takes its "other" color).
+    expect(castable('{W}{U}{B}{R}{G}', wu, ub, br, rg, gw)).toBe(true);
+  });
+
+  it('duals still pay generic costs with any leftover source', () => {
+    expect(castable('{3}', src('W', 'U'), src('B', 'R'), src('G', 'W', 'U'))).toBe(true);
+    expect(castable('{4}', src('W', 'U'), src('B', 'R'), src('G', 'W', 'U'))).toBe(false);
+  });
+});
