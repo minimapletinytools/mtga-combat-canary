@@ -31,12 +31,12 @@ const MASCOT_OPTIONS: MascotOption[] = [
 ];
 
 const STORAGE_KEY = 'mtgatricks:mascot';
-const DEFAULT_KEY = 'combat-canary';
+const DEFAULT_KEY = 'none';
 
 /**
  * A small companion perched in the corner: pick a card and it's shown at
- * full size/opacity, top-right, "watching over" the app. On by default
- * (Combat Canary); choice persists across reloads.
+ * full size/opacity, top-right, "watching over" the app. Off by default;
+ * choice persists across reloads.
  */
 export function Mascot() {
   const [key, setKey] = useState<string>(() => localStorage.getItem(STORAGE_KEY) ?? DEFAULT_KEY);

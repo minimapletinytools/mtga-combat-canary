@@ -143,7 +143,7 @@ export function App({ cardSource }: AppProps) {
       <Mascot />
       <div className="app">
       <header className="app-header">
-        <h1>mtgatricks</h1>
+        <h1>MTG Combat Canary</h1>
         <p className="tagline">Pick a set, enter open mana, see every instant-speed trick.</p>
       </header>
 

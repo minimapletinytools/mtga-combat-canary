@@ -109,8 +109,8 @@ body {
 
 .mascot-image {
   display: block;
-  width: 132px;
-  border-radius: 10px;
+  width: 220px;
+  border-radius: 12px;
   border: 1px solid var(--border-light);
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
 }
@@ -268,9 +268,15 @@ button:focus-visible {
   flex-wrap: wrap;
   gap: 0.6rem;
   margin-bottom: 0.8rem;
-  /* Reserve room so the right-aligned chip/toggle/total group wraps onto
-     its own line instead of running under the fixed mascot panel. */
-  padding-right: 190px;
+  /* Reserve room so the right-aligned actions group wraps onto its own line
+     instead of running under the fixed mascot panel. */
+  padding-right: 260px;
+}
+
+.mana-input-title {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
 }
 
 .mana-input h2 {

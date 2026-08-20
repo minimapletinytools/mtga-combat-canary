@@ -39,13 +39,15 @@ export function ManaAutoSummary({ mana, status, toggleButton }: ManaAutoSummaryP
   return (
     <section className="mana-input mana-auto-summary">
       <div className="mana-input-header">
-        <h2>Open mana</h2>
-        <div className="mana-auto-meta">
-          {meta && <span className={`status-chip ${meta.className}`}>{meta.label}</span>}
-          {toggleButton}
+        <div className="mana-input-title">
+          <h2>Open mana</h2>
           <span className="mana-total">
             {total} untapped source{total === 1 ? '' : 's'}
           </span>
+        </div>
+        <div className="mana-auto-meta">
+          {toggleButton}
+          {meta && <span className={`status-chip ${meta.className}`}>{meta.label}</span>}
         </div>
       </div>
       <div className="mana-steppers">

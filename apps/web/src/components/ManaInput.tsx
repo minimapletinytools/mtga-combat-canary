@@ -144,12 +144,14 @@ export function ManaInput({ manaProvider, hidden, toggleButton }: ManaInputProps
   return (
     <section className="mana-input" hidden={hidden}>
       <div className="mana-input-header">
-        <h2>Open mana</h2>
-        <div className="mana-input-header-actions">
-          {toggleButton}
+        <div className="mana-input-title">
+          <h2>Open mana</h2>
           <span className="mana-total">
             {total} untapped source{total === 1 ? '' : 's'}
           </span>
+        </div>
+        <div className="mana-input-header-actions">
+          {toggleButton}
           <button type="button" className="clear-all-btn" onClick={clearAll} disabled={total === 0}>
             Clear all
           </button>
