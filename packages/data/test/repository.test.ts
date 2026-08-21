@@ -7,10 +7,12 @@ import * as scryfall from '../src/scryfall';
 vi.mock('../src/scryfall', () => ({
   fetchSets: vi.fn(),
   fetchSetCards: vi.fn(),
+  fetchStandardCards: vi.fn(),
 }));
 
 const mockedFetchSets = vi.mocked(scryfall.fetchSets);
 const mockedFetchSetCards = vi.mocked(scryfall.fetchSetCards);
+const mockedFetchStandardCards = vi.mocked(scryfall.fetchStandardCards);
 
 const sampleSets: SetInfo[] = [
   {
@@ -44,6 +46,7 @@ describe('CachedCardRepository', () => {
   beforeEach(() => {
     mockedFetchSets.mockReset();
     mockedFetchSetCards.mockReset();
+    mockedFetchStandardCards.mockReset();
   });
 
   describe('getSetCards', () => {
@@ -187,6 +190,105 @@ describe('CachedCardRepository', () => {
 
       expect(result).toEqual(sampleSets);
       expect(mockedFetchSets).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('getStandardCards', () => {
+    it('fetches on a cache miss and persists JSON + timestamp under cards:standard', async () => {
+      mockedFetchStandardCards.mockResolvedValue(sampleCards);
+      const store = new MemoryStore();
+      const repo = new CachedCardRepository(store);
+
+      const before = Date.now();
+      const result = await repo.getStandardCards();
+      const after = Date.now();
+
+      expect(result).toEqual(sampleCards);
+      expect(mockedFetchStandardCards).toHaveBeenCalledTimes(1);
+      expect(await store.get('cards:standard')).toBe(JSON.stringify(sampleCards));
+
+      const ts = Number(await store.get('cards:standard:ts'));
+      expect(ts).toBeGreaterThanOrEqual(before);
+      expect(ts).toBeLessThanOrEqual(after);
+    });
+
+    it('serves from cache within the 24h TTL without refetching', async () => {
+      mockedFetchStandardCards.mockResolvedValue(sampleCards);
+      const store = new MemoryStore();
+      const repo = new CachedCardRepository(store);
+
+      await repo.getStandardCards();
+      const second = await repo.getStandardCards();
+
+      expect(second).toEqual(sampleCards);
+      expect(mockedFetchStandardCards).toHaveBeenCalledTimes(1);
+    });
+
+    it('refetches once the 24h TTL has expired (Standard rotates, unlike a printed set)', async () => {
+      mockedFetchStandardCards.mockResolvedValue(sampleCards);
+      const store = new MemoryStore();
+      const repo = new CachedCardRepository(store);
+
+      await repo.getStandardCards();
+      expect(mockedFetchStandardCards).toHaveBeenCalledTimes(1);
+
+      const staleTs = Date.now() - 25 * 60 * 60 * 1000;
+      await store.set('cards:standard:ts', String(staleTs));
+
+      const rotatedCards: Card[] = [{ ...sampleCards[0]!, id: 'card-rotated', name: 'Post-Rotation Card' }];
+      mockedFetchStandardCards.mockResolvedValue(rotatedCards);
+
+      const result = await repo.getStandardCards();
+      expect(result).toEqual(rotatedCards);
+      expect(mockedFetchStandardCards).toHaveBeenCalledTimes(2);
+    });
+
+    it('treats a missing timestamp as a cache miss even if the JSON is present', async () => {
+      mockedFetchStandardCards.mockResolvedValue(sampleCards);
+      const store = new MemoryStore();
+      await store.set('cards:standard', JSON.stringify(sampleCards));
+
+      const repo = new CachedCardRepository(store);
+      const result = await repo.getStandardCards();
+
+      expect(result).toEqual(sampleCards);
+      expect(mockedFetchStandardCards).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not collide with the forever-cached per-set cache under cards:{code}', async () => {
+      mockedFetchSetCards.mockResolvedValue(sampleCards);
+      mockedFetchStandardCards.mockResolvedValue([
+        { ...sampleCards[0]!, id: 'card-standard', name: 'Standard-Only Card' },
+      ]);
+      const store = new MemoryStore();
+      const repo = new CachedCardRepository(store);
+
+      const setResult = await repo.getSetCards('fdn');
+      const standardResult = await repo.getStandardCards();
+
+      expect(setResult[0]?.name).toBe('Test Instant');
+      expect(standardResult[0]?.name).toBe('Standard-Only Card');
+      expect(await store.get('cards:fdn')).not.toBe(await store.get('cards:standard'));
+    });
+  });
+
+  describe('refreshStandard', () => {
+    it('always refetches and overwrites the Standard cache, even on a cache hit', async () => {
+      mockedFetchStandardCards.mockResolvedValueOnce(sampleCards).mockResolvedValueOnce([]);
+      const store = new MemoryStore();
+      const repo = new CachedCardRepository(store);
+
+      await repo.getStandardCards();
+      expect(mockedFetchStandardCards).toHaveBeenCalledTimes(1);
+
+      const refreshed = await repo.refreshStandard();
+      expect(refreshed).toEqual([]);
+      expect(mockedFetchStandardCards).toHaveBeenCalledTimes(2);
+      expect(await store.get('cards:standard')).toBe(JSON.stringify([]));
+
+      const afterRefresh = await repo.getStandardCards();
+      expect(afterRefresh).toEqual([]);
+      expect(mockedFetchStandardCards).toHaveBeenCalledTimes(2);
     });
   });
 });

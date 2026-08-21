@@ -159,9 +159,9 @@ function mapCard(raw: RawCard): Card {
   return card;
 }
 
-function buildSearchUrl(code: string): string {
+function buildSearchUrl(query: string): string {
   const url = new URL(`${API_BASE}/cards/search`);
-  url.searchParams.set('q', `set:${code}`);
+  url.searchParams.set('q', query);
   url.searchParams.set('unique', 'cards');
   return url.toString();
 }
@@ -194,12 +194,13 @@ async function fetchSearchPage(url: string): Promise<RawSearchPage | null> {
 }
 
 /**
- * GET /cards/search?q=set:{code}&unique=cards with pagination, mapped to the
- * pinned Card type. See PLAN.md WP3 for etiquette (delays, 429 retry).
+ * Runs a Scryfall search query to completion, following pagination (with the
+ * etiquette delay/429-retry from fetchSearchPage), mapped to the pinned Card
+ * type. Shared by fetchSetCards and fetchStandardCards. See PLAN.md WP3.
  */
-export async function fetchSetCards(code: string): Promise<Card[]> {
+async function fetchAllCards(query: string): Promise<Card[]> {
   const cards: Card[] = [];
-  let url: string | null = buildSearchUrl(code);
+  let url: string | null = buildSearchUrl(query);
   let isFirstPage = true;
 
   while (url) {
@@ -221,4 +222,22 @@ export async function fetchSetCards(code: string): Promise<Card[]> {
   }
 
   return cards;
+}
+
+/** GET /cards/search?q=set:{code}&unique=cards — every card in a set. */
+export async function fetchSetCards(code: string): Promise<Card[]> {
+  return fetchAllCards(`set:${code}`);
+}
+
+/**
+ * GET /cards/search?q=legal:standard (t:instant or keyword:flash)&unique=cards.
+ * Standard's full legal pool (~4,900 cards) is an order of magnitude bigger
+ * than any single set, so — unlike fetchSetCards, which fetches a whole set
+ * and lets packages/core filter client-side — this pre-filters to
+ * instant-speed cards in the query itself (Scryfall's own search syntax),
+ * shrinking the fetch to ~700 cards. The app never displays anything but
+ * instant-speed cards, so nothing is lost by filtering server-side here.
+ */
+export async function fetchStandardCards(): Promise<Card[]> {
+  return fetchAllCards('legal:standard (t:instant or keyword:flash)');
 }

@@ -190,22 +190,31 @@ body {
   word-break: break-word;
 }
 
-/* Set picker */
+/* Format & set pickers */
 
-.set-picker {
+.picker-row {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.set-picker,
+.format-picker {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
 }
 
-.set-picker label {
+.set-picker label,
+.format-picker label {
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-faint);
 }
 
-.set-picker select {
+.set-picker select,
+.format-picker select {
   align-self: flex-start;
   min-width: 260px;
 }

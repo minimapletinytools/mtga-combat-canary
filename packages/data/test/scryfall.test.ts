@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fetchSetCards, fetchSets } from '../src/scryfall';
+import { fetchSetCards, fetchStandardCards, fetchSets } from '../src/scryfall';
 import searchFixture from './fixtures/search-page.json';
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -203,6 +203,69 @@ describe('fetchSetCards', () => {
 
     expect(cards).toEqual([]);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('fetchStandardCards', () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('queries legal:standard pre-filtered to instant-speed cards, not the whole pool', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ object: 'list', data: [], has_more: false }));
+
+    await fetchStandardCards();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const url = requestedUrl(fetchMock, 0);
+    expect(url.origin + url.pathname).toBe('https://api.scryfall.com/cards/search');
+    expect(url.searchParams.get('q')).toBe('legal:standard (t:instant or keyword:flash)');
+    expect(url.searchParams.get('unique')).toBe('cards');
+  });
+
+  it('shares fetchSetCards\' mapping, pagination, and headers (reuses fetchAllCards)', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse({
+          object: 'list',
+          data: [
+            {
+              id: 'std-1',
+              name: 'Standard Instant',
+              set: 'abc',
+              collector_number: '1',
+              rarity: 'common',
+              mana_cost: '{U}',
+              cmc: 1,
+              type_line: 'Instant',
+              keywords: [],
+              layout: 'normal',
+              games: ['arena'],
+              scryfall_uri: 'https://scryfall.com/card/abc/1',
+            },
+          ],
+          has_more: true,
+          next_page: 'https://api.scryfall.com/cards/search?q=legal%3Astandard&unique=cards&page=2',
+        }),
+      )
+      .mockResolvedValueOnce(jsonResponse({ object: 'list', data: [], has_more: false }));
+
+    const cards = await fetchStandardCards();
+
+    expect(cards).toEqual([
+      expect.objectContaining({ id: 'std-1', name: 'Standard Instant', rarity: 'common' }),
+    ]);
+    expect(fetchMock).toHaveBeenCalledTimes(2); // pagination followed
+    const init = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
+    const headers = new Headers(init?.headers);
+    expect(headers.get('User-Agent')).toBe('mtgatricks/0.1'); // same header etiquette
   });
 });
 

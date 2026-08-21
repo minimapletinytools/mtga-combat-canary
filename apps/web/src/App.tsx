@@ -5,15 +5,16 @@ import type { CardSource } from './cardSource';
 import { ManualManaProvider } from './manaProvider';
 import { BridgeManaProvider } from './bridgeManaProvider';
 import { SetPicker } from './components/SetPicker';
+import { FormatPicker, type Format } from './components/FormatPicker';
 import { ManaSection, type ManaMode } from './components/ManaSection';
 import { TrickList, type SortDirection } from './components/TrickList';
 import { Mascot } from './components/Mascot';
 
-// Persist only the last chosen set code. Deliberately not using
-// @mtgatricks/data's KVStore here — the UI stays dependency-light and this
-// is one string. TODO(WP5): consider moving this to KVStore if/when the UI
-// needs to persist more than a single primitive.
+// Persisted UI choices. Deliberately not using @mtgatricks/data's KVStore
+// here — the UI stays dependency-light and these are two strings.
+// TODO(WP5): consider moving to KVStore if the UI needs to persist more.
 const LAST_SET_CODE_KEY = 'mtgatricks:lastSetCode';
+const LAST_FORMAT_KEY = 'mtgatricks:lastFormat';
 
 type TrickComputation =
   | { status: 'ready'; results: TrickResult[] }
@@ -38,6 +39,10 @@ export function App({ cardSource }: AppProps) {
   const [mana, setMana] = useState<OpenMana>({ sources: [] });
   const [bridgeStatus, setBridgeStatus] = useState<ArenaStatus | null>(null);
   const [unresolvedCount, setUnresolvedCount] = useState<number | null>(null);
+
+  const [format, setFormat] = useState<Format>(() =>
+    localStorage.getItem(LAST_FORMAT_KEY) === 'standard' ? 'standard' : 'limited',
+  );
 
   const [sets, setSets] = useState<SetInfo[] | null>(null);
   const [loadingSets, setLoadingSets] = useState(true);
@@ -95,16 +100,18 @@ export function App({ cardSource }: AppProps) {
     };
   }, [cardSource]);
 
-  // Fetch cards whenever the selected set changes. Clear the previous set's
-  // cards immediately so stale results never show while a new set loads.
+  // Fetch cards whenever the format or (in Limited mode) the selected set
+  // changes. Clear the previous cards immediately so stale results never
+  // show while the new pool loads.
   useEffect(() => {
-    if (!selectedCode) return;
+    if (format === 'limited' && !selectedCode) return;
     let cancelled = false;
     setLoadingCards(true);
     setCardsError(null);
     setCards(null);
-    cardSource
-      .getSetCards(selectedCode)
+    const fetchCards =
+      format === 'standard' ? cardSource.getStandardCards() : cardSource.getSetCards(selectedCode as string);
+    fetchCards
       .then((result) => {
         if (!cancelled) setCards(result);
       })
@@ -117,11 +124,16 @@ export function App({ cardSource }: AppProps) {
     return () => {
       cancelled = true;
     };
-  }, [cardSource, selectedCode]);
+  }, [cardSource, format, selectedCode]);
 
   function handleSelectSet(code: string) {
     setSelectedCode(code);
     localStorage.setItem(LAST_SET_CODE_KEY, code);
+  }
+
+  function handleFormatChange(next: Format) {
+    setFormat(next);
+    localStorage.setItem(LAST_FORMAT_KEY, next);
   }
 
   // The trick pipeline (packages/core) throws until WP1/WP2 land — guard so
@@ -150,20 +162,25 @@ export function App({ cardSource }: AppProps) {
       <div className="app">
       <header className="app-header">
         <h1>MTG Combat Canary</h1>
-        <p className="tagline">Pick a set, enter open mana, see every instant-speed trick.</p>
+        <p className="tagline">Pick a format, enter open mana, see every instant-speed trick.</p>
       </header>
 
       {setsError && <div className="banner banner-error">Could not load sets: {setsError}</div>}
 
-      <SetPicker
-        sets={sets}
-        selectedCode={selectedCode}
-        onSelect={handleSelectSet}
-        loadingSets={loadingSets}
-        loadingCards={loadingCards}
-      />
+      <div className="picker-row">
+        <FormatPicker format={format} onChange={handleFormatChange} />
+        {format === 'limited' && (
+          <SetPicker
+            sets={sets}
+            selectedCode={selectedCode}
+            onSelect={handleSelectSet}
+            loadingSets={loadingSets}
+            loadingCards={loadingCards}
+          />
+        )}
+      </div>
 
-      {cardsError && <div className="banner banner-error">Could not load set cards: {cardsError}</div>}
+      {cardsError && <div className="banner banner-error">Could not load card data: {cardsError}</div>}
 
       <ManaSection
         manualManaProvider={manualManaProvider}
@@ -182,7 +199,9 @@ export function App({ cardSource }: AppProps) {
             Loading card data…
           </div>
         ) : !computation ? (
-          <div className="banner banner-info">Pick a set to see possible tricks.</div>
+          <div className="banner banner-info">
+            {format === 'limited' ? 'Pick a set to see possible tricks.' : 'Loading Standard card data…'}
+          </div>
         ) : computation.status === 'engine-not-ready' ? (
           <div className="banner banner-warning">
             <strong>Engine not ready.</strong> The core trick-finding logic (WP1/WP2) hasn&rsquo;t

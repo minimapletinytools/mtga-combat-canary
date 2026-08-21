@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { findTricks, type OpenMana } from '@mtgatricks/core';
-import { fetchSetCards, fetchSets } from '../src/scryfall';
+import { fetchSetCards, fetchStandardCards, fetchSets } from '../src/scryfall';
 
 // End-to-end smoke test against the real Scryfall API. Skipped by default so
 // the suite stays offline-safe; run with LIVE_SCRYFALL=1 to enable.
@@ -31,5 +31,21 @@ describe.skipIf(!live)('live Scryfall smoke test', () => {
     const cancel = tricks.find((t) => t.card.name === 'Cancel');
     expect(cancel).toBeDefined();
     expect(cancel?.castability.castable).toBe(false);
+  }, 60_000);
+
+  it('fetches the Standard-legal instant-speed pool, pre-filtered server-side', async () => {
+    const cards = await fetchStandardCards();
+    // ~700 as of writing (Standard's full legal pool is ~4,900) — a wide
+    // sanity band since the pool shifts every rotation/banning, not a tight
+    // pin. The real assertion is the query-level filter actually worked:
+    // every returned card must be an instant OR carry the Flash keyword.
+    expect(cards.length).toBeGreaterThan(300);
+    expect(cards.length).toBeLessThan(1500);
+    for (const card of cards) {
+      const isInstant = card.type_line.includes('Instant');
+      const hasFlash = card.keywords.includes('Flash');
+      const faceIsInstant = card.card_faces?.some((f) => f.type_line.includes('Instant')) ?? false;
+      expect(isInstant || hasFlash || faceIsInstant, `${card.name}: ${card.type_line}`).toBe(true);
+    }
   }, 60_000);
 });

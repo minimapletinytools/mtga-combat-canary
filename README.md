@@ -37,6 +37,13 @@ pnpm --filter @mtgatricks/web build      # static build → apps/web/dist
 
 ## How it works
 
+**Two card pools.** A Format dropdown picks Limited (then a second dropdown picks
+which set, its full printed pool) or Standard (the current constructed-legal
+instant-speed pool, no set to pick — fetched pre-filtered via Scryfall's own search
+syntax, `legal:standard (t:instant or keyword:flash)`, since the full Standard pool is
+~6.6x bigger than what's actually shown). Limited defaults on. Standard's pool is
+cached for 24h (it rotates) rather than forever, unlike a printed set's cards.
+
 **Castability is real satisfiability, not a mana-value check.** Each card's cost is
 parsed into pips (colored, hybrid `{W/U}`, mono-hybrid `{2/W}`, phyrexian `{W/P}`,
 colorless `{C}`, snow, X) and matched against the open sources with bipartite maximum
@@ -67,8 +74,8 @@ crash.
   tailer, open-mana derivation. Tested against a real (scrubbed) log fixture.
 - `packages/data` — Scryfall client (sets, paginated set search) + cached repository
   over a `KVStore` abstraction (IndexedDB in the browser, memory in tests).
-- `apps/web` — React + Vite UI: set picker, mana steppers, rarity-grouped trick grid,
-  and the desktop bridge detection (inert on the plain web).
+- `apps/web` — React + Vite UI: format/set pickers, mana steppers, rarity-grouped
+  trick grid, and the desktop bridge detection (inert on the plain web).
 - `apps/desktop` — Electron shell: main-process tracker wiring, the Scryfall bulk
   arena-id map, and a contextBridge preload exposing `window.mtgatricks`.
 
@@ -106,6 +113,36 @@ See `PLAN.md` for the full architecture, pinned interfaces, and phase history.
 - **The log format is unofficial** and has broken across Arena patches before. The app
   is built to degrade to manual mode, but tracking can silently lag a patch until the
   parser is updated.
+
+## Future features
+
+- **Sort by real-world play frequency.** The obvious next step for Standard mode —
+  order results by how often each card actually shows up in decks, not just rarity.
+  Investigated and shelved for now: TopDeck.gg has a real, free, documented API
+  (`topdeck.gg/docs/tournaments-v2`), but a live check (2026-08-20/21) found its
+  Standard coverage is far too sparse to be representative — 118 tournaments and only
+  **39 decklisted entries total** over the last 6 months, concentrated in one local
+  game store's weekly league. (Their real strength is Commander/cEDH — an EDH pull
+  over just 60 days returned 134MB of data, versus a few hundred KB for Standard.)
+  Building a "most played" sort on that sample would rank a couple of specific local
+  players' pet cards above genuine staples — actively misleading, not just noisy. The
+  path forward is **Melee.gg** (WotC's actual organized-play platform, so premier
+  Standard events — RCQs, Arena Opens — genuinely happen there): access isn't
+  self-serve, it requires emailing `contact@melee.gg` and possibly a fee/approval
+  wait. If that data ever lands, the plumbing is a small, contained addition: a
+  `play_count?: number` field on the pinned `Card` type (same pattern as `arena_id`/
+  `produced_mana`), a `'most-played'` direction in `sortTricks`, a scheduled CI job
+  (mirroring `.github/workflows/deploy-pages.yml`) that precomputes a
+  `play-frequency.json` static asset server-side — never calling the data source's
+  API from the browser, since that would mean shipping an API key in a public static
+  bundle — and a small merge-by-name step in the web app before sorting.
+- **Formats beyond Standard.** Pioneer, Modern, Historic/Explorer, Alchemy, etc. The
+  Standard-mode plumbing generalizes cleanly: `CardSource.getStandardCards()` is
+  really "fetch a format's Scryfall-legal instant-speed pool with a 24h TTL" — turning
+  it into `getFormatCards(format)` and widening `FormatPicker`'s dropdown is most of
+  the work. Held off until there's a real reason to add more than one non-Limited
+  format at once (possibly the same moment play-frequency data arrives, since ranking
+  matters more once the pool isn't small enough to just scan by eye).
 
 ## Maintenance and Contribution
 

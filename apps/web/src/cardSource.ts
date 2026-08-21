@@ -9,6 +9,8 @@ import type { Card, SetInfo } from '@mtgatricks/core';
 export interface CardSource {
   listSets(): Promise<SetInfo[]>;
   getSetCards(code: string): Promise<Card[]>;
+  /** Standard's current instant-speed card pool (no set to pick). */
+  getStandardCards(): Promise<Card[]>;
 }
 
 export const FIXTURE_SET: SetInfo = {
@@ -227,6 +229,11 @@ export class FixtureCardSource implements CardSource {
     // actually visible during manual testing.
     await new Promise((resolve) => setTimeout(resolve, 300));
     if (code !== FIXTURE_SET.code) return [];
+    return FIXTURE_CARDS;
+  }
+
+  async getStandardCards(): Promise<Card[]> {
+    await new Promise((resolve) => setTimeout(resolve, 300));
     return FIXTURE_CARDS;
   }
 }
