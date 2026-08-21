@@ -116,9 +116,16 @@ See `PLAN.md` for the full architecture, pinned interfaces, and phase history.
 
 ## Future features
 
-- **Sort by real-world play frequency.** The obvious next step for Standard mode —
-  order results by how often each card actually shows up in decks, not just rarity.
-  Investigated and shelved for now: TopDeck.gg has a real, free, documented API
+- **Sort by real-world play frequency — and un-hide Standard mode.** Standard support
+  is fully built (`packages/data`'s `getStandardCards`, 24h-TTL cached, pre-filtered
+  server-side to instant-speed cards) but the UI entry point is currently hidden
+  (`STANDARD_FORMAT_ENABLED = false` in `apps/web/src/App.tsx` — flip it back on to
+  re-expose the Format dropdown). Reason: Standard's pool is ~700 castable-eligible
+  cards, an order of magnitude more than a Limited set (~50–70) — rarity-only sorting
+  doesn't scale to that, so without a real "how good/played is this" signal the list
+  is just too much to browse usefully. The fix: order results by how often each card
+  actually shows up in decks, not just rarity — investigated and shelved for now.
+  TopDeck.gg has a real, free, documented API
   (`topdeck.gg/docs/tournaments-v2`), but a live check (2026-08-20/21) found its
   Standard coverage is far too sparse to be representative — 118 tournaments and only
   **39 decklisted entries total** over the last 6 months, concentrated in one local

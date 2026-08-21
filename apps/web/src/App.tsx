@@ -16,6 +16,14 @@ import { Mascot } from './components/Mascot';
 const LAST_SET_CODE_KEY = 'mtgatricks:lastSetCode';
 const LAST_FORMAT_KEY = 'mtgatricks:lastFormat';
 
+// Flip to true to re-expose the Standard format picker. Hidden for now —
+// see README's "Future features" section: ~700 castable-eligible cards is
+// too many to browse usefully without a real sort (rarity alone doesn't cut
+// it at Standard's scale the way it does for a ~300-card Limited set). The
+// data layer (getStandardCards, 24h-TTL cache) is fully built and tested;
+// this is the only gate. When flipped, the picker itself still works.
+const STANDARD_FORMAT_ENABLED = false;
+
 type TrickComputation =
   | { status: 'ready'; results: TrickResult[] }
   | { status: 'engine-not-ready'; message: string };
@@ -41,7 +49,7 @@ export function App({ cardSource }: AppProps) {
   const [unresolvedCount, setUnresolvedCount] = useState<number | null>(null);
 
   const [format, setFormat] = useState<Format>(() =>
-    localStorage.getItem(LAST_FORMAT_KEY) === 'standard' ? 'standard' : 'limited',
+    STANDARD_FORMAT_ENABLED && localStorage.getItem(LAST_FORMAT_KEY) === 'standard' ? 'standard' : 'limited',
   );
 
   const [sets, setSets] = useState<SetInfo[] | null>(null);
@@ -162,13 +170,17 @@ export function App({ cardSource }: AppProps) {
       <div className="app">
       <header className="app-header">
         <h1>MTG Combat Canary</h1>
-        <p className="tagline">Pick a format, enter open mana, see every instant-speed trick.</p>
+        <p className="tagline">
+          {STANDARD_FORMAT_ENABLED
+            ? 'Pick a format, enter open mana, see every instant-speed trick.'
+            : 'Pick a set, enter open mana, see every instant-speed trick.'}
+        </p>
       </header>
 
       {setsError && <div className="banner banner-error">Could not load sets: {setsError}</div>}
 
       <div className="picker-row">
-        <FormatPicker format={format} onChange={handleFormatChange} />
+        {STANDARD_FORMAT_ENABLED && <FormatPicker format={format} onChange={handleFormatChange} />}
         {format === 'limited' && (
           <SetPicker
             sets={sets}
