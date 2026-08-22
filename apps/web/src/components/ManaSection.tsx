@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { ArenaStatus, OpenMana } from '@mtgatricks/core';
 import type { BridgeManaProvider } from '../bridgeManaProvider';
 import type { ManualManaProvider } from '../manaProvider';
@@ -14,6 +15,10 @@ interface ManaSectionProps {
   unresolvedCount: number | null;
   mode: ManaMode;
   onModeChange: (mode: ManaMode) => void;
+  /** The chosen mascot's card (or null when off) — rendered into whichever
+   * variant is visible, in its dedicated right-hand column. Selection lives
+   * in App and is picked via the corner MascotControl, not here. */
+  mascotImage: ReactNode;
 }
 
 /**
@@ -37,6 +42,7 @@ export function ManaSection({
   unresolvedCount,
   mode,
   onModeChange,
+  mascotImage,
 }: ManaSectionProps) {
   const autoActive = bridgeManaProvider !== null && mode === 'auto';
 
@@ -56,6 +62,7 @@ export function ManaSection({
         manaProvider={manualManaProvider}
         hidden={autoActive}
         toggleButton={autoActive ? null : toggleButton}
+        mascotImage={mascotImage}
       />
       {autoActive && (
         <ManaAutoSummary
@@ -63,6 +70,7 @@ export function ManaSection({
           status={bridgeStatus}
           unresolvedCount={unresolvedCount}
           toggleButton={toggleButton}
+          mascotImage={mascotImage}
         />
       )}
     </>

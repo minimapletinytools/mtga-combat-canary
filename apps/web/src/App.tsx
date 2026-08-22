@@ -8,7 +8,7 @@ import { SetPicker } from './components/SetPicker';
 import { FormatPicker, type Format } from './components/FormatPicker';
 import { ManaSection, type ManaMode } from './components/ManaSection';
 import { TrickList, type SortDirection } from './components/TrickList';
-import { Mascot } from './components/Mascot';
+import { MascotControl, MascotImage, useMascotSelection } from './components/Mascot';
 
 // Persisted UI choices. Deliberately not using @mtgatricks/data's KVStore
 // here — the UI stays dependency-light and these are two strings.
@@ -62,6 +62,9 @@ export function App({ cardSource }: AppProps) {
   const [cardsError, setCardsError] = useState<string | null>(null);
 
   const [direction, setDirection] = useState<SortDirection>('common-first');
+
+  const mascotSelection = useMascotSelection();
+  const mascotImage = mascotSelection.selected && <MascotImage selected={mascotSelection.selected} />;
 
   // The active provider is the bridge's in auto mode (only possible when a
   // bridge exists); manual otherwise. With no bridge, activeProvider is
@@ -160,37 +163,35 @@ export function App({ cardSource }: AppProps) {
     }
   }, [cards, mana, direction]);
 
-  const castableCount =
-    computation?.status === 'ready' ? computation.results.filter((r) => r.castability.castable).length : 0;
-  const totalCount = computation?.status === 'ready' ? computation.results.length : 0;
-
   return (
     <>
-      <Mascot />
+      <MascotControl value={mascotSelection.key} onChange={mascotSelection.setKey} />
       <div className="app">
-      <header className="app-header">
-        <h1>MTG Combat Canary</h1>
-        <p className="tagline">
-          {STANDARD_FORMAT_ENABLED
-            ? 'Pick a format, enter open mana, see every instant-speed trick.'
-            : 'Pick a set, enter open mana, see every instant-speed trick.'}
-        </p>
-      </header>
+      <div className="header-row">
+        <header className="app-header">
+          <h1>MTG Combat Canary</h1>
+          <p className="tagline">
+            {STANDARD_FORMAT_ENABLED
+              ? 'Pick a format, enter open mana, see every instant-speed trick.'
+              : 'Pick a set, enter open mana, see every instant-speed trick.'}
+          </p>
+        </header>
+
+        <div className="picker-row">
+          {STANDARD_FORMAT_ENABLED && <FormatPicker format={format} onChange={handleFormatChange} />}
+          {format === 'limited' && (
+            <SetPicker
+              sets={sets}
+              selectedCode={selectedCode}
+              onSelect={handleSelectSet}
+              loadingSets={loadingSets}
+              loadingCards={loadingCards}
+            />
+          )}
+        </div>
+      </div>
 
       {setsError && <div className="banner banner-error">Could not load sets: {setsError}</div>}
-
-      <div className="picker-row">
-        {STANDARD_FORMAT_ENABLED && <FormatPicker format={format} onChange={handleFormatChange} />}
-        {format === 'limited' && (
-          <SetPicker
-            sets={sets}
-            selectedCode={selectedCode}
-            onSelect={handleSelectSet}
-            loadingSets={loadingSets}
-            loadingCards={loadingCards}
-          />
-        )}
-      </div>
 
       {cardsError && <div className="banner banner-error">Could not load card data: {cardsError}</div>}
 
@@ -202,6 +203,7 @@ export function App({ cardSource }: AppProps) {
         unresolvedCount={unresolvedCount}
         mode={mode}
         onModeChange={setMode}
+        mascotImage={mascotImage}
       />
 
       <main>
@@ -221,12 +223,7 @@ export function App({ cardSource }: AppProps) {
             <div className="banner-detail">{computation.message}</div>
           </div>
         ) : (
-          <>
-            <p className="status-line">
-              {castableCount} of {totalCount} instant-speed cards castable
-            </p>
-            <TrickList results={computation.results} direction={direction} onDirectionChange={setDirection} />
-          </>
+          <TrickList results={computation.results} direction={direction} onDirectionChange={setDirection} />
         )}
       </main>
       </div>

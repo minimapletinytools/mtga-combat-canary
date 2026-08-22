@@ -30,6 +30,9 @@ interface ManaAutoSummaryProps {
    * equivalent, since manual entry never has an "unknown" source. */
   unresolvedCount: number | null;
   toggleButton?: ReactNode;
+  /** The chosen mascot's card (or null when off), rendered in a dedicated
+   * right-hand column so it never pushes the summary below down. */
+  mascotImage?: ReactNode;
 }
 
 /** Auto-mode counterpart to ManaInput: a read-only per-color breakdown of
@@ -37,7 +40,7 @@ interface ManaAutoSummaryProps {
  * unresolved lands), a read-only dual/tri-land section that auto-expands
  * the moment one is detected, and the tracking-status chip. Rendered only
  * when the bridge is present and auto mode is active. */
-export function ManaAutoSummary({ mana, status, unresolvedCount, toggleButton }: ManaAutoSummaryProps) {
+export function ManaAutoSummary({ mana, status, unresolvedCount, toggleButton, mascotImage }: ManaAutoSummaryProps) {
   const counts = summarizeOpenMana(mana);
   const comboCounts = summarizeCombos(mana);
   const total = mana.sources.length;
@@ -52,73 +55,77 @@ export function ManaAutoSummary({ mana, status, unresolvedCount, toggleButton }:
 
   return (
     <section className="mana-input mana-auto-summary">
-      <div className="mana-input-header">
-        <div className="mana-input-title">
-          <h2>Open mana</h2>
-          <span className="mana-total">
-            {total} untapped source{total === 1 ? '' : 's'}
-          </span>
-        </div>
-        <div className="mana-auto-meta">
-          {toggleButton}
-          {meta && <span className={`status-chip ${meta.className}`}>{meta.label}</span>}
-        </div>
-      </div>
-
-      <div className="mana-steppers">
-        {SLOTS.map(({ key, label, colors }) => (
-          <div
-            key={key}
-            className="stepper stepper-readonly"
-            style={{ background: manaFillBackground(colors) }}
-          >
-            <span className="stepper-label">{label}</span>
-            <span className="stepper-value">{counts[key]}</span>
+      <div className="mana-input-main">
+        <div className="mana-input-header">
+          <div className="mana-input-title">
+            <h2>Open mana</h2>
+            <span className="mana-total">
+              {total} untapped source{total === 1 ? '' : 's'}
+            </span>
           </div>
-        ))}
-        {unresolvedCount !== null && (
-          <div
-            className="stepper stepper-readonly stepper-other"
-            title="Untapped opponent lands whose colors couldn't be resolved from the log"
-          >
-            <span className="stepper-label">Other</span>
-            <span className="stepper-value">{unresolvedCount}</span>
+          <div className="mana-auto-meta">
+            {toggleButton}
+            {meta && <span className={`status-chip ${meta.className}`}>{meta.label}</span>}
+          </div>
+        </div>
+
+        <div className="mana-steppers">
+          {SLOTS.map(({ key, label, colors }) => (
+            <div
+              key={key}
+              className="stepper stepper-readonly"
+              style={{ background: manaFillBackground(colors) }}
+            >
+              <span className="stepper-label">{label}</span>
+              <span className="stepper-value">{counts[key]}</span>
+            </div>
+          ))}
+          {unresolvedCount !== null && (
+            <div
+              className="stepper stepper-readonly stepper-other"
+              title="Untapped opponent lands whose colors couldn't be resolved from the log"
+            >
+              <span className="stepper-label">Other</span>
+              <span className="stepper-value">{unresolvedCount}</span>
+            </div>
+          )}
+        </div>
+
+        <button
+          type="button"
+          className="dual-toggle"
+          onClick={() => setManualExpand(!expanded)}
+          aria-expanded={expanded}
+        >
+          <span className={`dual-toggle-caret ${expanded ? 'expanded' : ''}`} aria-hidden="true">
+            ▸
+          </span>
+          Dual &amp; tri-lands
+        </button>
+
+        {expanded && (
+          <div className="dual-section">
+            {hasCombo ? (
+              <div className="mana-steppers mana-steppers-compact">
+                {activeCombos.map((key) => (
+                  <div
+                    key={key}
+                    className="stepper stepper-readonly stepper-compact"
+                    style={{ background: manaFillBackground(splitComboKey(key)) }}
+                  >
+                    <span className="stepper-label">{key}</span>
+                    <span className="stepper-value">{comboCounts[key]}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="dual-section-empty">No dual/tri-lands detected yet.</p>
+            )}
           </div>
         )}
       </div>
 
-      <button
-        type="button"
-        className="dual-toggle"
-        onClick={() => setManualExpand(!expanded)}
-        aria-expanded={expanded}
-      >
-        <span className={`dual-toggle-caret ${expanded ? 'expanded' : ''}`} aria-hidden="true">
-          ▸
-        </span>
-        Dual &amp; tri-lands
-      </button>
-
-      {expanded && (
-        <div className="dual-section">
-          {hasCombo ? (
-            <div className="mana-steppers mana-steppers-compact">
-              {activeCombos.map((key) => (
-                <div
-                  key={key}
-                  className="stepper stepper-readonly stepper-compact"
-                  style={{ background: manaFillBackground(splitComboKey(key)) }}
-                >
-                  <span className="stepper-label">{key}</span>
-                  <span className="stepper-value">{comboCounts[key]}</span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="dual-section-empty">No dual/tri-lands detected yet.</p>
-          )}
-        </div>
-      )}
+      {mascotImage && <div className="mana-input-mascot-col">{mascotImage}</div>}
     </section>
   );
 }

@@ -34,26 +34,38 @@ const STORAGE_KEY = 'mtgatricks:mascot';
 const DEFAULT_KEY = 'none';
 
 /**
- * A small companion perched in the corner: pick a card and it's shown at
- * full size/opacity, top-right, "watching over" the app. Off by default;
- * choice persists across reloads.
+ * Owns the chosen-mascot state (persisted to localStorage) so it can be
+ * shared between MascotControl (the corner dropdown) and MascotImage (the
+ * card itself, shown in the Open mana panel) without two independent copies
+ * drifting out of sync.
  */
-export function Mascot() {
+export function useMascotSelection() {
   const [key, setKey] = useState<string>(() => localStorage.getItem(STORAGE_KEY) ?? DEFAULT_KEY);
-  const selected = MASCOT_OPTIONS.find((o) => o.key === key) ?? null;
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, key);
   }, [key]);
 
+  return { key, setKey, selected: MASCOT_OPTIONS.find((o) => o.key === key) ?? null };
+}
+
+interface MascotControlProps {
+  value: string;
+  onChange: (key: string) => void;
+}
+
+/** The mascot picker: a small dropdown pinned to the page's upper-right
+ * corner. Off by default. The chosen card renders elsewhere — see
+ * MascotImage — so this control never grows with the selection. */
+export function MascotControl({ value, onChange }: MascotControlProps) {
   return (
-    <div className="mascot-panel">
+    <div className="mascot-control-panel">
       <div className="mascot-controls">
         <span className="mascot-label">Mascot</span>
         <select
           className="mascot-select"
-          value={key}
-          onChange={(event) => setKey(event.target.value)}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
           aria-label="Mascot"
         >
           <option value="none">Off</option>
@@ -64,7 +76,17 @@ export function Mascot() {
           ))}
         </select>
       </div>
-      {selected && <img className="mascot-image" src={selected.url} alt={selected.label} />}
     </div>
   );
+}
+
+interface MascotImageProps {
+  selected: MascotOption;
+}
+
+/** The chosen mascot's card, shown at full size — rendered into the Open
+ * mana panel's dedicated right-hand column (see .mana-input-mascot-col) so
+ * it never pushes that panel's own content down. */
+export function MascotImage({ selected }: MascotImageProps) {
+  return <img className="mascot-image" src={selected.url} alt={selected.label} />;
 }

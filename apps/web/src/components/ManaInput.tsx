@@ -69,12 +69,15 @@ interface ManaInputProps {
    * the header instead of a separate row above. Absent on the plain web
    * build, so that case is unaffected. */
   toggleButton?: ReactNode;
+  /** The chosen mascot's card (or null when off), rendered in a dedicated
+   * right-hand column so it never pushes the steppers below down. */
+  mascotImage?: ReactNode;
 }
 
 /** Steppers (0–12) for each basic color, colorless, and "any color" (for
  * flexible/unknown sources), plus an expandable section of dual and
  * tri-land sources. Feeds ManualManaProvider.set() on every change. */
-export function ManaInput({ manaProvider, hidden, toggleButton }: ManaInputProps) {
+export function ManaInput({ manaProvider, hidden, toggleButton, mascotImage }: ManaInputProps) {
   const [counts, setCounts] = useState<Counts>(initialCounts);
   const [expanded, setExpanded] = useState(false);
 
@@ -110,53 +113,57 @@ export function ManaInput({ manaProvider, hidden, toggleButton }: ManaInputProps
 
   return (
     <section className="mana-input" hidden={hidden}>
-      <div className="mana-input-header">
-        <div className="mana-input-title">
-          <h2>Open mana</h2>
-          <span className="mana-total">
-            {total} untapped source{total === 1 ? '' : 's'}
+      <div className="mana-input-main">
+        <div className="mana-input-header">
+          <div className="mana-input-title">
+            <h2>Open mana</h2>
+            <span className="mana-total">
+              {total} untapped source{total === 1 ? '' : 's'}
+            </span>
+          </div>
+          <div className="mana-input-header-actions">
+            {toggleButton}
+            <button type="button" className="clear-all-btn" onClick={clearAll} disabled={total === 0}>
+              Clear all
+            </button>
+          </div>
+        </div>
+
+        <div className="mana-steppers">
+          {COLORS.map(({ key, label }) => (
+            <Stepper
+              key={key}
+              label={label}
+              colors={[key]}
+              value={counts.colors[key]}
+              onChange={(delta) => updateColor(key, delta)}
+            />
+          ))}
+          <Stepper label="C" colors={['C']} value={counts.c} onChange={updateC} />
+          <Stepper label="Any" colors={COLOR_WHEEL} value={counts.any} onChange={updateAny} />
+        </div>
+
+        <button
+          type="button"
+          className="dual-toggle"
+          onClick={() => setExpanded((e) => !e)}
+          aria-expanded={expanded}
+        >
+          <span className={`dual-toggle-caret ${expanded ? 'expanded' : ''}`} aria-hidden="true">
+            ▸
           </span>
-        </div>
-        <div className="mana-input-header-actions">
-          {toggleButton}
-          <button type="button" className="clear-all-btn" onClick={clearAll} disabled={total === 0}>
-            Clear all
-          </button>
-        </div>
+          Dual &amp; tri-lands
+        </button>
+
+        {expanded && (
+          <div className="dual-section">
+            <ComboGroup title="Dual lands" combos={DUAL_COMBOS} counts={counts.combos} onChange={updateCombo} />
+            <ComboGroup title="Tri-lands" combos={TRI_COMBOS} counts={counts.combos} onChange={updateCombo} />
+          </div>
+        )}
       </div>
 
-      <div className="mana-steppers">
-        {COLORS.map(({ key, label }) => (
-          <Stepper
-            key={key}
-            label={label}
-            colors={[key]}
-            value={counts.colors[key]}
-            onChange={(delta) => updateColor(key, delta)}
-          />
-        ))}
-        <Stepper label="C" colors={['C']} value={counts.c} onChange={updateC} />
-        <Stepper label="Any" colors={COLOR_WHEEL} value={counts.any} onChange={updateAny} />
-      </div>
-
-      <button
-        type="button"
-        className="dual-toggle"
-        onClick={() => setExpanded((e) => !e)}
-        aria-expanded={expanded}
-      >
-        <span className={`dual-toggle-caret ${expanded ? 'expanded' : ''}`} aria-hidden="true">
-          ▸
-        </span>
-        Dual &amp; tri-lands
-      </button>
-
-      {expanded && (
-        <div className="dual-section">
-          <ComboGroup title="Dual lands" combos={DUAL_COMBOS} counts={counts.combos} onChange={updateCombo} />
-          <ComboGroup title="Tri-lands" combos={TRI_COMBOS} counts={counts.combos} onChange={updateCombo} />
-        </div>
-      )}
+      {mascotImage && <div className="mana-input-mascot-col">{mascotImage}</div>}
     </section>
   );
 }
