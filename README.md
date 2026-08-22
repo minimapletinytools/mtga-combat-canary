@@ -16,6 +16,13 @@ pnpm -r build                            # core/arena/data + web dist + desktop
 pnpm --filter @mtgatricks/desktop start  # launch the Electron app
 ```
 
+or alternatively:
+
+```sh
+make build   # core/arena/data + web dist + desktop
+make run     # builds (if needed) and launches the Electron app
+```
+
 For auto-tracking, enable **Options → Account → Detailed Logs (Plugin Support)** in
 MTG Arena. First desktop launch downloads Scryfall's bulk card data once (~100MB) to
 build the arena-id map, cached under the app's user-data directory. Dev mode:
