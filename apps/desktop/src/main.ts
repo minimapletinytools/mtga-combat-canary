@@ -9,6 +9,13 @@ import { resolvePlayerLogPath } from './logPath.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
+// A close-up of Combat Canary's face. The assets live beside dist/ rather than
+// in it — tsc only emits JS, so nothing copies them. icon.icns/icon.ico are
+// there for a packager; these two PNGs are what we can set at runtime.
+const assets = path.join(here, '../assets');
+const windowIconPath = path.join(assets, 'icon.png'); // full-bleed square
+const dockIconPath = path.join(assets, 'icon-mac.png'); // macOS rounded tile
+
 // Latest known state, kept so a renderer that reloads (or a newly created
 // window) can recover it instead of waiting for the next tracker event.
 let latestMana: OpenMana | null = null;
@@ -21,6 +28,7 @@ function createWindow(): BrowserWindow {
   const win = new BrowserWindow({
     width: 1400,
     height: 1000,
+    icon: windowIconPath, // Windows/Linux only; macOS takes its icon from the dock.
     webPreferences: {
       preload: path.join(here, 'preload.mjs'),
       contextIsolation: true,
@@ -110,6 +118,12 @@ async function setupTracker(): Promise<void> {
 }
 
 app.whenReady().then(() => {
+  // Unpackaged macOS runs (`electron .`) show the stock Electron icon in the
+  // dock unless we override it; a packaged build gets it from icon.icns.
+  if (process.platform === 'darwin') {
+    app.dock?.setIcon(dockIconPath);
+  }
+
   createWindow();
   void setupTracker();
 });
