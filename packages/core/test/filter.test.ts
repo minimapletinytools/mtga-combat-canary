@@ -20,6 +20,9 @@ const { parseManaCostMock, canCastMock } = vi.hoisted(() => {
     '{2}{G}': { castable: false, usesXZero: false, mayUseLife: false },
     '{3}{U}': { castable: false, usesXZero: false, mayUseLife: false },
     '{X}{R}': { castable: true, usesXZero: true, mayUseLife: false },
+    '{B}': { castable: true, usesXZero: false, mayUseLife: false },
+    '{2}{B}': { castable: false, usesXZero: false, mayUseLife: false },
+    '{2}': { castable: true, usesXZero: false, mayUseLife: false },
   };
 
   const parseManaCostMock = (cost: string) => ({ pips: [], raw: cost });
@@ -37,7 +40,7 @@ vi.mock('../src/mana', () => ({
 // vi.mock calls (and their vi.hoisted dependencies above) are hoisted by
 // Vitest above this import, so filter.ts's internal `./mana` import
 // resolves to the mock below.
-import { findTricks, instantSpeedFaces, sortTricks } from '../src/filter';
+import { findTricks, hasCyclingTricks, instantSpeedFaces, sortTricks } from '../src/filter';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -283,6 +286,51 @@ describe('instantSpeedFaces', () => {
       { faceName: 'Twin Bolt Right', reason: 'instant', manaCost: '{R}' },
     ]);
   });
+
+  it('detects discard abilities on creature cards (e.g. Proft, Sinister Mastermind)', () => {
+    const proftCard = makeCard({
+      id: 'card-proft',
+      name: 'Proft, Sinister Mastermind',
+      mana_cost: '{2}{B}',
+      type_line: 'Legendary Creature — Human Rogue',
+      keywords: ['Threshold', 'Menace'],
+      oracle_text:
+        "Threshold — You can't cast this spell unless there are seven or more cards in your graveyard.\nMenace\n{B}, Discard this card: Target creature gets -3/-1 until end of turn.",
+    });
+
+    expect(instantSpeedFaces(proftCard)).toEqual([
+      {
+        faceName: 'Proft, Sinister Mastermind',
+        reason: 'ability',
+        manaCost: '{B}',
+        isCycling: false,
+        abilityName: 'Discard',
+        abilityText: '{B}, Discard this card: Target creature gets -3/-1 until end of turn.',
+      },
+    ]);
+  });
+
+  it('detects cycling abilities on non-instant cards and tags them with isCycling', () => {
+    const cyclingCreature = makeCard({
+      id: 'card-cycler',
+      name: 'Cycling Monster',
+      mana_cost: '{4}{G}{G}',
+      type_line: 'Creature — Beast',
+      keywords: ['Cycling'],
+      oracle_text: 'Cycling {2} ({2}, Discard this card: Draw a card.)',
+    });
+
+    expect(instantSpeedFaces(cyclingCreature)).toEqual([
+      {
+        faceName: 'Cycling Monster',
+        reason: 'cycling',
+        manaCost: '{2}',
+        isCycling: true,
+        abilityName: 'Cycling',
+        abilityText: 'Cycling {2} ({2}, Discard this card: Draw a card.)',
+      },
+    ]);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -291,6 +339,31 @@ describe('instantSpeedFaces', () => {
 
 describe('findTricks', () => {
   const mana: OpenMana = { sources: [] };
+
+  const proftCard = makeCard({
+    id: 'card-proft',
+    name: 'Proft, Sinister Mastermind',
+    mana_cost: '{2}{B}', // {2}{B} is not castable in our mock
+    type_line: 'Legendary Creature — Human Rogue',
+    keywords: ['Threshold', 'Menace'],
+    oracle_text: '{B}, Discard this card: Target creature gets -3/-1 until end of turn.', // {B} is castable
+  });
+
+  const cyclingCreature = makeCard({
+    id: 'card-cycler',
+    name: 'Cycling Monster',
+    mana_cost: '{4}{G}{G}',
+    type_line: 'Creature — Beast',
+    oracle_text: 'Cycling {2}', // {2} is castable
+  });
+
+  const instantWithCycling = makeCard({
+    id: 'card-instant-cycling',
+    name: 'Censor Clone',
+    mana_cost: '{1}{U}', // {1}{U} is castable
+    type_line: 'Instant',
+    oracle_text: 'Counter target spell unless its controller pays {1}.\nCycling {2}', // {2} also castable
+  });
 
   it('excludes cards with no instant-speed face (sorcery, land)', () => {
     const results = findTricks([sorceryCard, landCard], mana);
@@ -374,6 +447,59 @@ describe('findTricks', () => {
     expect(new Set(ids).size).toBe(ids.length); // at most one per card
     expect(ids).not.toContain('card-sorcery');
     expect(ids).not.toContain('card-land');
+  });
+
+  it('evaluates Proft against its discard ability cost {B} rather than card cost {2}{B}', () => {
+    // In our mock castabilityTable:
+    // {B} is castable: true
+    // {2}{B} is castable: false
+    const results = findTricks([proftCard], mana);
+    expect(results).toHaveLength(1);
+    expect(results[0]).toMatchObject({
+      card: proftCard,
+      faceName: 'Proft, Sinister Mastermind',
+      reason: 'ability',
+      abilityName: 'Discard',
+      castability: { castable: true },
+      isCycling: false,
+    });
+  });
+
+  it('includes cycling cards by default and tags them with isCycling', () => {
+    const results = findTricks([cyclingCreature], mana);
+    expect(results).toHaveLength(1);
+    expect(results[0]).toMatchObject({
+      card: cyclingCreature,
+      faceName: 'Cycling Monster',
+      reason: 'cycling',
+      isCycling: true,
+      castability: { castable: true },
+    });
+  });
+
+  it('hides pure cycling cards when hideCycling option is true', () => {
+    const results = findTricks([cyclingCreature, proftCard], mana, { hideCycling: true });
+    // cyclingCreature should be hidden, but proftCard (real combat trick) remains
+    expect(results).toHaveLength(1);
+    expect(results[0]?.card.id).toBe('card-proft');
+  });
+
+  it('prefers instant castable face over cycling face on the same card', () => {
+    // instantWithCycling has {1}{U} instant (castable) and {2} cycling (castable)
+    const results = findTricks([instantWithCycling], mana);
+    expect(results).toHaveLength(1);
+    expect(results[0]).toMatchObject({
+      reason: 'instant',
+      isCycling: undefined, // or false
+    });
+  });
+
+  it('hasCyclingTricks identifies whether results contain cycling cards', () => {
+    const withCycling = findTricks([cyclingCreature, proftCard], mana);
+    expect(hasCyclingTricks(withCycling)).toBe(true);
+
+    const withoutCycling = findTricks([proftCard], mana);
+    expect(hasCyclingTricks(withoutCycling)).toBe(false);
   });
 });
 

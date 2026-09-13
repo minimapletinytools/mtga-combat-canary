@@ -1,10 +1,14 @@
-import type { Card, OpenMana, Rarity, TrickResult } from './types.js';
+import type { Card, OpenMana, Rarity, TrickReason, TrickResult } from './types.js';
 import { canCast, parseManaCost } from './mana.js';
+import { extractHandAbilities } from './handAbilities.js';
 
 export interface InstantSpeedFace {
   faceName: string;
-  reason: 'instant' | 'flash';
+  reason: TrickReason;
   manaCost: string;
+  isCycling?: boolean;
+  abilityName?: string;
+  abilityText?: string;
 }
 
 function isInstantTypeLine(typeLine: string): boolean {
@@ -16,14 +20,15 @@ function isLandTypeLine(typeLine: string): boolean {
 }
 
 /**
- * Which face(s) of this card can be cast at instant speed, and why.
- * Handles single-face cards, adventures, splits, and transform fronts.
- *
- * WP2 — see PLAN.md.
+ * Which face(s) or hand-activated ability(s) of this card can be cast or activated
+ * at instant speed, and why.
+ * Handles single-face cards, adventures, splits, transform fronts, and hand abilities
+ * (Channel, Bloodrush, Reinforce, Discard from hand, Cycling/Typecycling).
  */
 export function instantSpeedFaces(card: Card): InstantSpeedFace[] {
+  const faces: InstantSpeedFace[] = [];
+
   if (card.card_faces && card.card_faces.length > 0) {
-    const faces: InstantSpeedFace[] = [];
     const hasFlash = card.keywords.includes('Flash');
     let flashAttributed = false;
 
@@ -45,31 +50,48 @@ export function instantSpeedFaces(card: Card): InstantSpeedFace[] {
         }
       }
     }
+  } else {
+    const typeLine = card.type_line;
+    const manaCost = card.mana_cost ?? '';
 
-    return faces;
+    if (isInstantTypeLine(typeLine)) {
+      faces.push({ faceName: card.name, reason: 'instant', manaCost });
+    } else if (card.keywords.includes('Flash')) {
+      faces.push({ faceName: card.name, reason: 'flash', manaCost });
+    }
   }
 
-  const typeLine = card.type_line;
-  const manaCost = card.mana_cost ?? '';
-
-  if (isInstantTypeLine(typeLine)) {
-    return [{ faceName: card.name, reason: 'instant', manaCost }];
+  // Extract hand-activated abilities (Channel, Bloodrush, Reinforce, Discard, Cycling, etc.)
+  const abilities = extractHandAbilities(card);
+  for (const ability of abilities) {
+    faces.push({
+      faceName: card.name,
+      reason: ability.isCycling ? 'cycling' : 'ability',
+      manaCost: ability.manaCost,
+      isCycling: ability.isCycling,
+      abilityName: ability.name,
+      abilityText: ability.text,
+    });
   }
 
-  if (card.keywords.includes('Flash')) {
-    return [{ faceName: card.name, reason: 'flash', manaCost }];
-  }
+  return faces;
+}
 
-  return [];
+export interface FindTricksOptions {
+  /** If true, cycling and typecycling abilities will be ignored. */
+  hideCycling?: boolean;
 }
 
 /**
- * All cards in `cards` with an instant-speed face, with castability evaluated
- * against `mana`. At most one TrickResult per card (prefer a castable face).
- *
- * WP2 — see PLAN.md.
+ * All cards in `cards` with an instant-speed face or hand ability, with castability
+ * evaluated against `mana`. At most one TrickResult per card (preferring castable faces,
+ * and preferring non-cycling tricks over cycling).
  */
-export function findTricks(cards: Card[], mana: OpenMana): TrickResult[] {
+export function findTricks(
+  cards: Card[],
+  mana: OpenMana,
+  options?: FindTricksOptions,
+): TrickResult[] {
   const results: TrickResult[] = [];
 
   for (const card of cards) {
@@ -79,6 +101,10 @@ export function findTricks(cards: Card[], mana: OpenMana): TrickResult[] {
     let best: TrickResult | undefined;
 
     for (const face of faces) {
+      if (options?.hideCycling && face.isCycling) {
+        continue;
+      }
+
       const parsed = parseManaCost(face.manaCost);
       const castability = canCast(parsed, mana);
       const candidate: TrickResult = {
@@ -86,6 +112,9 @@ export function findTricks(cards: Card[], mana: OpenMana): TrickResult[] {
         faceName: face.faceName,
         reason: face.reason,
         castability,
+        isCycling: face.isCycling,
+        abilityName: face.abilityName,
+        abilityText: face.abilityText,
       };
 
       if (!best) {
@@ -94,8 +123,13 @@ export function findTricks(cards: Card[], mana: OpenMana): TrickResult[] {
       }
 
       // Prefer a castable face over the current best if the current best isn't castable.
-      if (castability.castable && !best.castability.castable) {
+      if (candidate.castability.castable && !best.castability.castable) {
         best = candidate;
+      } else if (candidate.castability.castable === best.castability.castable) {
+        // If both have the same castability, prefer real combat tricks/spells over cycling
+        if (best.isCycling && !candidate.isCycling) {
+          best = candidate;
+        }
       }
     }
 
@@ -103,6 +137,13 @@ export function findTricks(cards: Card[], mana: OpenMana): TrickResult[] {
   }
 
   return results;
+}
+
+/**
+ * Returns true if any result in the list has a cycling ability.
+ */
+export function hasCyclingTricks(results: TrickResult[]): boolean {
+  return results.some((r) => r.isCycling || r.reason === 'cycling');
 }
 
 const RARITY_RANK: Record<Rarity, number> = {

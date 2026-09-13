@@ -603,6 +603,28 @@ button:focus-visible {
   font-size: 0.92rem;
 }
 
+.trick-list-actions {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+}
+
+.cycling-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  cursor: pointer;
+  user-select: none;
+}
+
+.cycling-toggle input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+
 .sort-control {
   display: flex;
   align-items: center;
@@ -659,6 +681,34 @@ button:focus-visible {
   text-align: center;
   color: var(--text-faint);
   font-size: 0.85rem;
+}
+
+.trick-card-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 2px 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  border-radius: 4px;
+  background: rgba(15, 23, 42, 0.85);
+  color: var(--text);
+  backdrop-filter: blur(4px);
+  border: 1px solid var(--border);
+  pointer-events: none;
+  z-index: 2;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.trick-card-badge.badge-cycling {
+  border-color: rgba(99, 179, 237, 0.5);
+  color: #63b3ed;
+}
+
+.trick-card-badge.badge-ability {
+  border-color: rgba(246, 173, 85, 0.5);
+  color: #f6ad55;
 }
 
 /* Hover preview: a larger version of the card, centered over its own grid
