@@ -35,6 +35,9 @@ describe('isCyclingAbility', () => {
     expect(isCyclingAbility('Mountaincycling')).toBe(true);
     expect(isCyclingAbility('Forestcycling')).toBe(true);
     expect(isCyclingAbility('Landcycling')).toBe(true);
+    expect(isCyclingAbility('Halflingcycling')).toBe(true);
+    expect(isCyclingAbility('Hobbitcycling')).toBe(true);
+    expect(isCyclingAbility('hobbitcycling')).toBe(true);
     expect(isCyclingAbility('Slivercycling')).toBe(true);
     expect(isCyclingAbility('Wizardcycling')).toBe(true);
     expect(isCyclingAbility('Typecycling')).toBe(true);
@@ -204,6 +207,130 @@ describe('extractHandAbilities', () => {
       isCycling: true,
       text: 'Basic landcycling {2} ({2}, Discard this card: Search your library for a basic land card...)',
     });
+  });
+
+  it('extracts Islandcycling (e.g. Lórien Revealed)', () => {
+    const lorien = makeCard({
+      name: 'Lórien Revealed',
+      type_line: 'Sorcery',
+      mana_cost: '{3}{U}{U}',
+      oracle_text:
+        'Draw three cards.\nIslandcycling {1} ({1}, Discard this card: Search your library for an Island card, reveal it, put it into your hand, then shuffle.)',
+      keywords: ['Islandcycling', 'Landcycling', 'Typecycling', 'Cycling'],
+    });
+
+    const abilities = extractHandAbilities(lorien);
+    expect(abilities).toHaveLength(1);
+    expect(abilities[0]).toEqual({
+      kind: 'cycling',
+      name: 'Islandcycling',
+      manaCost: '{1}',
+      isCycling: true,
+      text: 'Islandcycling {1} ({1}, Discard this card: Search your library for an Island card, reveal it, put it into your hand, then shuffle.)',
+    });
+  });
+
+  it('extracts Halflingcycling (e.g. Hobbit Hole) and Hobbitcycling', () => {
+    const hobbitHole = makeCard({
+      name: 'Hobbit Hole',
+      type_line: 'Land',
+      oracle_text:
+        '{T}, Sacrifice this land: Search your library for a basic land card, put it onto the battlefield tapped, then shuffle.\nHalflingcycling {4} ({4}, Discard this card: Search your library for a Halfling card, reveal it, put it into your hand, then shuffle.)',
+      keywords: ['Halflingcycling', 'Typecycling', 'Cycling'],
+    });
+
+    const hobbitAbilities = extractHandAbilities(hobbitHole);
+    expect(hobbitAbilities).toHaveLength(1);
+    expect(hobbitAbilities[0]).toEqual({
+      kind: 'cycling',
+      name: 'Halflingcycling',
+      manaCost: '{4}',
+      isCycling: true,
+      text: 'Halflingcycling {4} ({4}, Discard this card: Search your library for a Halfling card, reveal it, put it into your hand, then shuffle.)',
+    });
+
+    const customHobbit = makeCard({
+      name: 'Hobbit Scout',
+      oracle_text: 'Hobbitcycling {2} ({2}, Discard this card: Search your library for a Hobbit card...)',
+      keywords: ['Hobbitcycling', 'Cycling'],
+    });
+
+    const customAbilities = extractHandAbilities(customHobbit);
+    expect(customAbilities).toHaveLength(1);
+    expect(customAbilities[0]?.name).toBe('Hobbitcycling');
+    expect(customAbilities[0]?.manaCost).toBe('{2}');
+    expect(customAbilities[0]?.isCycling).toBe(true);
+  });
+
+  it('extracts cycling when embedded in a comma-separated keyword list (e.g. Blast from the Past)', () => {
+    const blast = makeCard({
+      name: 'Blast from the Past',
+      oracle_text:
+        'Madness {R}, cycling {1}{R}, kicker {2}{R}, flashback {3}{R}, buyback {4}{R}\nBlast from the Past deals 2 damage to any target.',
+      keywords: ['Cycling', 'Flashback', 'Madness', 'Kicker', 'Buyback'],
+    });
+
+    const abilities = extractHandAbilities(blast);
+    expect(abilities).toHaveLength(1);
+    expect(abilities[0]?.name).toBe('cycling');
+    expect(abilities[0]?.manaCost).toBe('{1}{R}');
+    expect(abilities[0]?.isCycling).toBe(true);
+  });
+
+  it('extracts non-mana cycling abilities (e.g. Street Wraith, Edge of Autumn)', () => {
+    const streetWraith = makeCard({
+      name: 'Street Wraith',
+      oracle_text:
+        'Swampwalk\nCycling—Pay 2 life. (Pay 2 life, Discard this card: Draw a card.)',
+      keywords: ['Swampwalk', 'Cycling'],
+    });
+
+    const wraithAbilities = extractHandAbilities(streetWraith);
+    expect(wraithAbilities).toHaveLength(1);
+    expect(wraithAbilities[0]?.name).toBe('Cycling');
+    expect(wraithAbilities[0]?.manaCost).toBe('');
+    expect(wraithAbilities[0]?.isCycling).toBe(true);
+
+    const edge = makeCard({
+      name: 'Edge of Autumn',
+      oracle_text:
+        'Search your library...\nCycling—Sacrifice a land. (Sacrifice a land, Discard this card: Draw a card.)',
+      keywords: ['Cycling'],
+    });
+
+    const edgeAbilities = extractHandAbilities(edge);
+    expect(edgeAbilities).toHaveLength(1);
+    expect(edgeAbilities[0]?.name).toBe('Cycling');
+    expect(edgeAbilities[0]?.manaCost).toBe('');
+    expect(edgeAbilities[0]?.isCycling).toBe(true);
+  });
+
+  it('extracts multiple cycling abilities on the same line', () => {
+    const dualCycler = makeCard({
+      name: 'Dual Cycler',
+      oracle_text: 'Plainscycling {2}, Swampcycling {2}',
+      keywords: ['Plainscycling', 'Swampcycling', 'Cycling'],
+    });
+
+    const abilities = extractHandAbilities(dualCycler);
+    expect(abilities).toHaveLength(2);
+    expect(abilities[0]?.name).toBe('Plainscycling');
+    expect(abilities[0]?.manaCost).toBe('{2}');
+    expect(abilities[1]?.name).toBe('Swampcycling');
+    expect(abilities[1]?.manaCost).toBe('{2}');
+  });
+
+  it('falls back to card.keywords if oracle_text is missing but keyword indicates cycling', () => {
+    const keywordOnly = makeCard({
+      name: 'Keyword Cycler',
+      oracle_text: undefined,
+      keywords: ['Islandcycling', 'Cycling'],
+    });
+
+    const abilities = extractHandAbilities(keywordOnly);
+    expect(abilities).toHaveLength(1);
+    expect(abilities[0]?.name).toBe('Islandcycling');
+    expect(abilities[0]?.isCycling).toBe(true);
   });
 
   it('ignores abilities restricted to sorcery speed', () => {

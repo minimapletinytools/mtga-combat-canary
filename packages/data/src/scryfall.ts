@@ -235,7 +235,7 @@ export async function fetchSetCards(code: string): Promise<Card[]> {
 }
 
 /**
- * GET /cards/search?q=legal:standard (t:instant or keyword:flash or keyword:cycling or keyword:channel or o:bloodrush or o:reinforce or o:/\{.*\}, [Dd]iscard/)&unique=cards.
+ * GET /cards/search?q=legal:standard (t:instant or keyword:flash or keyword:cycling or o:cycling or keyword:channel or o:bloodrush or o:reinforce or o:/\{.*\}, [Dd]iscard/)&unique=cards.
  * Standard's full legal pool (~4,900 cards) is an order of magnitude bigger
  * than any single set, so — unlike fetchSetCards, which fetches a whole set
  * and lets packages/core filter client-side — this pre-filters to
@@ -244,6 +244,6 @@ export async function fetchSetCards(code: string): Promise<Card[]> {
  */
 export async function fetchStandardCards(): Promise<Card[]> {
   return fetchAllCards(
-    'legal:standard (t:instant or keyword:flash or keyword:cycling or keyword:channel or o:bloodrush or o:reinforce or o:/\\{.*\\}, [Dd]iscard/)',
+    'legal:standard (t:instant or keyword:flash or keyword:cycling or o:cycling or keyword:channel or o:bloodrush or o:reinforce or o:/\\{.*\\}, [Dd]iscard/)',
   );
 }

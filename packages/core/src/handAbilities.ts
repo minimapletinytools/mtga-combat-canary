@@ -50,7 +50,7 @@ export function isCyclingAbility(name: string): boolean {
  */
 export interface HandAbilityExtractor {
   name: string;
-  extract(line: string, card: Card): HandAbility | null;
+  extract(line: string, card: Card): HandAbility | HandAbility[] | null;
 }
 
 /**
@@ -58,26 +58,55 @@ export interface HandAbilityExtractor {
  * Matches lines like:
  *   - "Cycling {2}"
  *   - "Cycling {1}{U}"
+ *   - "Islandcycling {1}"
+ *   - "Halflingcycling {4}" / "Hobbitcycling {2}"
  *   - "Basic landcycling {2}"
  *   - "Forestcycling {2}"
  *   - "Plainscycling {1}{W}"
+ *   - Comma-separated keyword lists (e.g. "Madness {R}, cycling {1}{R}")
+ *   - Non-mana cycling (e.g. "Cycling—Pay 2 life", "Cycling—Sacrifice a land")
  */
 const cyclingExtractor: HandAbilityExtractor = {
   name: 'Cycling',
-  extract(line: string): HandAbility | null {
-    const match = line.match(/^([A-Za-z\s-]*?cycl(?:e|ing))[\s—-]+(\{[^}]+\}(?:\{[^}]+\})*)/i);
-    if (!match || !match[1] || !match[2]) return null;
+  extract(line: string): HandAbility | HandAbility[] | null {
+    const abilities: HandAbility[] = [];
 
-    const abilityName = match[1].trim();
-    const manaCost = match[2].trim();
+    // 1. Mana-cost cycling: matches any *cycling or *cycle with mana cost
+    // Uses \b to match anywhere in a line (e.g. comma-separated lists)
+    const matches = Array.from(
+      line.matchAll(/\b([A-Za-z\s-]*?cycl(?:e|ing))[\s—-]+(\{[^}]+\}(?:\{[^}]+\})*)/gi),
+    );
+    for (const match of matches) {
+      if (match[1] && match[2]) {
+        abilities.push({
+          kind: 'cycling',
+          name: match[1].trim(),
+          manaCost: match[2].trim(),
+          isCycling: true,
+          text: line,
+        });
+      }
+    }
 
-    return {
-      kind: 'cycling',
-      name: abilityName,
-      manaCost,
-      isCycling: true,
-      text: line,
-    };
+    // 2. Non-mana cycling: e.g. "Cycling—Pay 2 life." (Street Wraith), "Cycling—Sacrifice a land." (Edge of Autumn)
+    if (abilities.length === 0) {
+      const nonManaMatches = Array.from(
+        line.matchAll(/\b([A-Za-z\s-]*?cycl(?:e|ing))[\s—-]+(?:Pay\s+\d+\s+life|Sacrifice\s+[^.]+)/gi),
+      );
+      for (const match of nonManaMatches) {
+        if (match[1]) {
+          abilities.push({
+            kind: 'cycling',
+            name: match[1].trim(),
+            manaCost: '',
+            isCycling: true,
+            text: line,
+          });
+        }
+      }
+    }
+
+    return abilities.length > 0 ? abilities : null;
   },
 };
 
@@ -237,7 +266,11 @@ export function extractHandAbilitiesFromText(oracleText: string, card: Card): Ha
     for (const extractor of HAND_ABILITY_EXTRACTORS) {
       const ability = extractor.extract(line, card);
       if (ability) {
-        results.push(ability);
+        if (Array.isArray(ability)) {
+          results.push(...ability);
+        } else {
+          results.push(ability);
+        }
         break; // Match the first matching extractor for this line
       }
     }
@@ -250,6 +283,10 @@ export function extractHandAbilitiesFromText(oracleText: string, card: Card): Ha
  * Extracts all instant-speed hand-activated abilities for a given card.
  * Inspects `card.oracle_text` for single-faced cards, as well as `oracle_text`
  * on each face for multi-faced cards.
+ *
+ * If no cycling ability was found in oracle text, but `card.keywords` indicates
+ * a cycling variant (e.g. "Islandcycling", "Halflingcycling", "Hobbitcycling"),
+ * it extracts a fallback cycling ability so it is never missed.
  */
 export function extractHandAbilities(card: Card): HandAbility[] {
   const abilities: HandAbility[] = [];
@@ -262,6 +299,24 @@ export function extractHandAbilities(card: Card): HandAbility[] {
     for (const face of card.card_faces) {
       if (face.oracle_text) {
         abilities.push(...extractHandAbilitiesFromText(face.oracle_text, card));
+      }
+    }
+  }
+
+  // Fallback: If no cycling ability was extracted from oracle text, but card.keywords has cycling
+  // (e.g. "Islandcycling", "Halflingcycling", "Hobbitcycling", "Basic landcycling", etc.),
+  // ensure it is captured as a cycling ability.
+  if (card.keywords && !abilities.some((a) => a.isCycling)) {
+    for (const kw of card.keywords) {
+      if (isCyclingAbility(kw)) {
+        abilities.push({
+          kind: 'cycling',
+          name: kw,
+          manaCost: '',
+          isCycling: true,
+          text: kw,
+        });
+        break;
       }
     }
   }

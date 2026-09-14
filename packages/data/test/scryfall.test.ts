@@ -229,7 +229,7 @@ describe('fetchStandardCards', () => {
     const url = requestedUrl(fetchMock, 0);
     expect(url.origin + url.pathname).toBe('https://api.scryfall.com/cards/search');
     expect(url.searchParams.get('q')).toBe(
-      'legal:standard (t:instant or keyword:flash or keyword:cycling or keyword:channel or o:bloodrush or o:reinforce or o:/\\{.*\\}, [Dd]iscard/)',
+      'legal:standard (t:instant or keyword:flash or keyword:cycling or o:cycling or keyword:channel or o:bloodrush or o:reinforce or o:/\\{.*\\}, [Dd]iscard/)',
     );
     expect(url.searchParams.get('unique')).toBe('cards');
   });
