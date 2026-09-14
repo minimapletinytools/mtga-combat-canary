@@ -50,6 +50,7 @@ export interface Card {
   mana_cost?: string;        // absent on multi-face layouts
   cmc: number;
   type_line: string;
+  oracle_text?: string;      // rules text for single-face cards
   keywords: string[];        // Scryfall's computed keywords, e.g. ["Flash"]
   layout: string;            // 'normal' | 'adventure' | 'split' | 'modal_dfc' | ...
   card_faces?: CardFace[];
@@ -69,12 +70,17 @@ export interface SetInfo {
   icon_svg_uri: string;
 }
 
-/** A card matched by the trick filter, with which face is castable and why. */
+export type TrickReason = 'instant' | 'flash' | 'ability' | 'cycling';
+
+/** A card matched by the trick filter, with which face or ability is castable and why. */
 export interface TrickResult {
   card: Card;
-  faceName: string;               // which face/half is instant-speed castable
-  reason: 'instant' | 'flash';
+  faceName: string;               // which face/half is instant-speed castable, or card name
+  reason: TrickReason;
   castability: CastabilityResult;
+  isCycling?: boolean;            // true for cycling and all typecycling abilities
+  abilityName?: string;           // e.g. "Discard", "Channel", "Bloodrush", "Cycling"
+  abilityText?: string;           // full text of the ability line
 }
 
 /** Phase-2 seam. Manual provider on the web; Electron bridge provider on desktop. */

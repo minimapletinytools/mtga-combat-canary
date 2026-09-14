@@ -65,6 +65,8 @@ describe('fetchSetCards', () => {
       mana_cost: '{1}{R}',
       cmc: 2,
       type_line: 'Instant',
+      oracle_text:
+        'Choose one —\n• Abrade deals 3 damage to target creature.\n• Destroy target artifact.',
       keywords: [],
       layout: 'normal',
       games: ['paper', 'arena', 'mtgo'],
@@ -226,7 +228,9 @@ describe('fetchStandardCards', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const url = requestedUrl(fetchMock, 0);
     expect(url.origin + url.pathname).toBe('https://api.scryfall.com/cards/search');
-    expect(url.searchParams.get('q')).toBe('legal:standard (t:instant or keyword:flash)');
+    expect(url.searchParams.get('q')).toBe(
+      'legal:standard (t:instant or keyword:flash or keyword:cycling or o:cycling or keyword:channel or o:bloodrush or o:reinforce or o:/\\{.*\\}, [Dd]iscard/)',
+    );
     expect(url.searchParams.get('unique')).toBe('cards');
   });
 

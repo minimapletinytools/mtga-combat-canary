@@ -85,6 +85,7 @@ interface RawCard {
   mana_cost?: string;
   cmc: number;
   type_line: string;
+  oracle_text?: string;
   keywords?: string[];
   layout: string;
   card_faces?: RawCardFace[];
@@ -145,6 +146,10 @@ function mapCard(raw: RawCard): Card {
 
   if (raw.mana_cost !== undefined) {
     card.mana_cost = raw.mana_cost;
+  }
+
+  if (raw.oracle_text !== undefined) {
+    card.oracle_text = raw.oracle_text;
   }
 
   if (raw.card_faces) {
@@ -230,14 +235,15 @@ export async function fetchSetCards(code: string): Promise<Card[]> {
 }
 
 /**
- * GET /cards/search?q=legal:standard (t:instant or keyword:flash)&unique=cards.
+ * GET /cards/search?q=legal:standard (t:instant or keyword:flash or keyword:cycling or o:cycling or keyword:channel or o:bloodrush or o:reinforce or o:/\{.*\}, [Dd]iscard/)&unique=cards.
  * Standard's full legal pool (~4,900 cards) is an order of magnitude bigger
  * than any single set, so — unlike fetchSetCards, which fetches a whole set
  * and lets packages/core filter client-side — this pre-filters to
- * instant-speed cards in the query itself (Scryfall's own search syntax),
- * shrinking the fetch to ~700 cards. The app never displays anything but
- * instant-speed cards, so nothing is lost by filtering server-side here.
+ * instant-speed cards and hand-activated abilities (channel, cycling, discard)
+ * in the query itself (Scryfall's own search syntax).
  */
 export async function fetchStandardCards(): Promise<Card[]> {
-  return fetchAllCards('legal:standard (t:instant or keyword:flash)');
+  return fetchAllCards(
+    'legal:standard (t:instant or keyword:flash or keyword:cycling or o:cycling or keyword:channel or o:bloodrush or o:reinforce or o:/\\{.*\\}, [Dd]iscard/)',
+  );
 }
