@@ -24,14 +24,57 @@ describe('subtypesToProducedMana', () => {
     expect(subtypesToProducedMana([])).toEqual([]);
   });
 
-  it('maps mana tokens: Treasure/Gold to any color, Powerstone to C', () => {
+  it('maps mana tokens: Treasure/Gold to any color, Powerstone to C, Heartwood to R/G', () => {
     expect(subtypesToProducedMana(['SubType_Treasure'])).toEqual(['W', 'U', 'B', 'R', 'G']);
     expect(subtypesToProducedMana(['SubType_Gold'])).toEqual(['W', 'U', 'B', 'R', 'G']);
     expect(subtypesToProducedMana(['SubType_Powerstone'])).toEqual(['C']);
+    expect(subtypesToProducedMana(['SubType_Heartwood'])).toEqual(['R', 'G']);
     // Non-mana tokens stay non-sources.
     expect(subtypesToProducedMana(['SubType_Clue'])).toEqual([]);
     expect(subtypesToProducedMana(['SubType_Food'])).toEqual([]);
     expect(subtypesToProducedMana(['SubType_Blood'])).toEqual([]);
+  });
+});
+
+describe('heartwood tokens as opponent mana sources', () => {
+  const heartwood = (instanceId: number, extra: Record<string, unknown> = {}) => ({
+    instanceId,
+    grpId: 109999,
+    type: 'GameObjectType_Token',
+    zoneId: 28,
+    visibility: 'Visibility_Public',
+    ownerSeatId: 2,
+    controllerSeatId: 2,
+    cardTypes: ['CardType_Artifact'],
+    subtypes: ['SubType_Heartwood'],
+    ...extra,
+  });
+
+  it('derives R/G sources from untapped heartwood tokens, skipping tapped ones', () => {
+    const tracker = new GameStateTracker();
+    tracker.applyEvent({
+      greToClientMessages: [
+        {
+          type: 'GREMessageType_GameStateMessage',
+          systemSeatIds: [1],
+          gameStateMessage: {
+            type: 'GameStateType_Full',
+            zones: [{ zoneId: 28, type: 'ZoneType_Battlefield', visibility: 'Visibility_Public' }],
+            gameObjects: [heartwood(301), heartwood(302, { isTapped: true })],
+          },
+        },
+      ],
+    });
+
+    const composite = (grpId: number) => {
+      const subtypes = tracker.lookupSubtypes(grpId);
+      if (subtypes === undefined) return undefined;
+      const colors = subtypesToProducedMana(subtypes);
+      return colors.length > 0 ? colors : undefined;
+    };
+
+    const mana = deriveOpenMana(tracker.getState(), composite, 'opponent');
+    expect(mana).toEqual({ sources: [{ produces: ['R', 'G'] }] });
   });
 });
 

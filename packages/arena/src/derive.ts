@@ -21,6 +21,8 @@ const SUBTYPE_MANA: Record<string, ReadonlyArray<Color | 'C'>> = {
   // over-reports slightly — the right direction for a "what could they have"
   // warning tool.
   SubType_Powerstone: ['C'],
+  // Heartwood (Reality Fracture): taps for {R} or {G}.
+  SubType_Heartwood: ['R', 'G'],
 };
 
 /**
