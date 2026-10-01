@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fetchSetCards, fetchStandardCards, fetchSets } from '../src/scryfall';
+import { dedupeCards, fetchSetCards, fetchStandardCards, fetchSets } from '../src/scryfall';
 import searchFixture from './fixtures/search-page.json';
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -25,20 +25,20 @@ describe('fetchSetCards', () => {
     vi.unstubAllGlobals();
   });
 
-  it('builds a URL-encoded search request for the given set code', async () => {
-    fetchMock.mockResolvedValueOnce(jsonResponse({ object: 'list', data: [], has_more: false }));
+  it('builds a URL-encoded search request for the given set code with is:booster', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ ...searchFixture, has_more: false }));
 
     await fetchSetCards('fdn');
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const url = requestedUrl(fetchMock, 0);
     expect(url.origin + url.pathname).toBe('https://api.scryfall.com/cards/search');
-    expect(url.searchParams.get('q')).toBe('set:fdn');
+    expect(url.searchParams.get('q')).toBe('set:fdn is:booster');
     expect(url.searchParams.get('unique')).toBe('cards');
   });
 
   it('sets User-Agent and Accept headers (Scryfall 400s without them)', async () => {
-    fetchMock.mockResolvedValueOnce(jsonResponse({ object: 'list', data: [], has_more: false }));
+    fetchMock.mockResolvedValueOnce(jsonResponse({ ...searchFixture, has_more: false }));
 
     await fetchSetCards('fdn');
 
@@ -196,15 +196,176 @@ describe('fetchSetCards', () => {
     expect(elapsed).toBeGreaterThanOrEqual(950);
   }, 10000);
 
+  it('falls back to set:<code> when is:booster returns no cards', async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ object: 'list', data: [], has_more: false }))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          object: 'list',
+          data: [
+            {
+              id: 'fra-1',
+              name: 'Preview Flash Card',
+              set: 'fra',
+              collector_number: '1',
+              rarity: 'uncommon',
+              mana_cost: '{1}{U}',
+              cmc: 2,
+              type_line: 'Creature',
+              keywords: ['Flash'],
+              layout: 'normal',
+              games: ['arena'],
+              scryfall_uri: 'https://scryfall.com/card/fra/1',
+            },
+          ],
+          has_more: false,
+        }),
+      );
+
+    const cards = await fetchSetCards('fra');
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(requestedUrl(fetchMock, 0).searchParams.get('q')).toBe('set:fra is:booster');
+    expect(requestedUrl(fetchMock, 1).searchParams.get('q')).toBe('set:fra');
+    expect(cards).toHaveLength(1);
+    expect(cards[0]?.name).toBe('Preview Flash Card');
+  });
+
+  it('fetches associated bonus sheets for sets that have them', async () => {
+    // otj has bonus sheets 'otp' and 'big'
+    fetchMock
+      // otj is:booster
+      .mockResolvedValueOnce(
+        jsonResponse({
+          object: 'list',
+          data: [
+            {
+              id: 'otj-1',
+              name: 'Main Set Card',
+              set: 'otj',
+              collector_number: '1',
+              rarity: 'common',
+              mana_cost: '{R}',
+              cmc: 1,
+              type_line: 'Instant',
+              keywords: [],
+              layout: 'normal',
+              games: ['arena'],
+              scryfall_uri: 'https://scryfall.com/card/otj/1',
+            },
+          ],
+          has_more: false,
+        }),
+      )
+      // otp is:booster (empty, falls back)
+      .mockResolvedValueOnce(jsonResponse({ object: 'list', data: [], has_more: false }))
+      // otp fallback
+      .mockResolvedValueOnce(
+        jsonResponse({
+          object: 'list',
+          data: [
+            {
+              id: 'otp-1',
+              name: 'Breaking News Card',
+              set: 'otp',
+              collector_number: '1',
+              rarity: 'rare',
+              mana_cost: '{U}',
+              cmc: 1,
+              type_line: 'Instant',
+              keywords: [],
+              layout: 'normal',
+              games: ['arena'],
+              scryfall_uri: 'https://scryfall.com/card/otp/1',
+            },
+          ],
+          has_more: false,
+        }),
+      )
+      // big is:booster (empty, falls back)
+      .mockResolvedValueOnce(jsonResponse({ object: 'list', data: [], has_more: false }))
+      // big fallback
+      .mockResolvedValueOnce(
+        jsonResponse({
+          object: 'list',
+          data: [
+            {
+              id: 'big-1',
+              name: 'Big Score Card',
+              set: 'big',
+              collector_number: '1',
+              rarity: 'mythic',
+              mana_cost: '{2}{G}',
+              cmc: 3,
+              type_line: 'Instant',
+              keywords: [],
+              layout: 'normal',
+              games: ['arena'],
+              scryfall_uri: 'https://scryfall.com/card/big/1',
+            },
+          ],
+          has_more: false,
+        }),
+      );
+
+    const cards = await fetchSetCards('otj');
+
+    expect(cards.map((c) => c.name)).toEqual(['Main Set Card', 'Breaking News Card', 'Big Score Card']);
+  });
+
+  it('deduplicates cards by ID and normalized name, preferring earlier occurrence', () => {
+    const card1 = {
+      id: 'id-1',
+      name: 'Abrade',
+      set: 'fdn',
+      collector_number: '1',
+      rarity: 'uncommon' as const,
+      mana_cost: '{1}{R}',
+      cmc: 2,
+      type_line: 'Instant',
+      keywords: [],
+      layout: 'normal',
+      games: ['arena'],
+      scryfall_uri: 'https://scryfall.com/card/fdn/1',
+    };
+    const card1DuplicateName = {
+      ...card1,
+      id: 'id-2',
+      name: 'abrade ',
+      set: 'otp',
+    };
+    const card2 = {
+      ...card1,
+      id: 'id-3',
+      name: 'Shock',
+    };
+    const card2DuplicateId = {
+      ...card1,
+      id: 'id-3',
+      name: 'Shock Duplicate ID',
+    };
+
+    const deduped = dedupeCards([card1, card1DuplicateName, card2, card2DuplicateId]);
+    expect(deduped).toHaveLength(2);
+    expect(deduped[0]?.id).toBe('id-1');
+    expect(deduped[0]?.set).toBe('fdn');
+    expect(deduped[1]?.id).toBe('id-3');
+    expect(deduped[1]?.name).toBe('Shock');
+  });
+
   it('returns an empty array on a 404 "no cards found" error response', async () => {
-    fetchMock.mockResolvedValueOnce(
-      jsonResponse({ object: 'error', status: 404, code: 'not_found', details: 'No cards found' }, 404),
-    );
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse({ object: 'error', status: 404, code: 'not_found', details: 'No cards found' }, 404),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({ object: 'error', status: 404, code: 'not_found', details: 'No cards found' }, 404),
+      );
 
     const cards = await fetchSetCards('zzz-nonexistent');
 
     expect(cards).toEqual([]);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
 

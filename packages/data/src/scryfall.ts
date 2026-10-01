@@ -229,9 +229,85 @@ async function fetchAllCards(query: string): Promise<Card[]> {
   return cards;
 }
 
-/** GET /cards/search?q=set:{code}&unique=cards — every card in a set. */
-export async function fetchSetCards(code: string): Promise<Card[]> {
+/**
+ * Known bonus sheet set codes associated with draft sets.
+ * In draft, packs include cards from these bonus sheets.
+ */
+export const BONUS_SHEETS: Record<string, readonly string[]> = {
+  stx: ['sta'],        // Mystical Archive
+  bro: ['brr'],        // Retro Artifacts
+  mom: ['mul'],        // Multiverse Legends
+  woe: ['wot'],        // Enchanting Tales
+  otj: ['otp', 'big'], // Breaking News, The Big Score
+  znr: ['zne'],        // Zendikar Rising Expeditions
+  kld: ['mps'],        // Kaladesh Inventions
+  akh: ['mp2'],        // Amonkhet Invocations
+  bfz: ['exp'],        // Zendikar Expeditions
+  tsp: ['tsb'],        // Time Spiral Timeshifted
+  fin: ['fca'],        // Final Fantasy: Through the Ages
+  eoe: ['eos'],        // Edge of Eternities: Stellar Sights
+  sos: ['soa'],        // Secrets of Strixhaven Mystical Archive
+  trk: ['sds'],        // Stardates
+  mar: ['omb'],        // Through the Omenpaths Bonus Sheet
+};
+
+/**
+ * Deduplicates cards by ID and normalized name.
+ * Keeps the first occurrence seen (preferring main set printing over bonus sheet).
+ */
+export function dedupeCards(cards: Card[]): Card[] {
+  const seenIds = new Set<string>();
+  const seenNames = new Set<string>();
+  const deduped: Card[] = [];
+
+  for (const card of cards) {
+    const normName = card.name.toLowerCase().trim();
+    if (seenIds.has(card.id) || seenNames.has(normName)) {
+      continue;
+    }
+    seenIds.add(card.id);
+    seenNames.add(normName);
+    deduped.push(card);
+  }
+
+  return deduped;
+}
+
+/**
+ * Fetches cards for a set code, first attempting `set:{code} is:booster` to get
+ * only booster-draftable cards. If that returns no cards (common for preview/unreleased
+ * sets before Scryfall imports booster collation data), falls back to `set:{code}`.
+ */
+async function fetchDraftCardsForSet(code: string): Promise<Card[]> {
+  const boosterCards = await fetchAllCards(`set:${code} is:booster`);
+  if (boosterCards.length > 0) {
+    return boosterCards;
+  }
   return fetchAllCards(`set:${code}`);
+}
+
+/**
+ * GET draft cards for a set code, including any associated bonus sheet cards
+ * (e.g. Breaking News for OTJ, Enchanting Tales for WOE), with a fallback from
+ * `is:booster` to `set:{code}` for unreleased sets, deduped by ID and card name.
+ */
+export async function fetchSetCards(code: string): Promise<Card[]> {
+  const normalizedCode = code.toLowerCase();
+  const mainCards = await fetchDraftCardsForSet(normalizedCode);
+
+  const bonusCodes = BONUS_SHEETS[normalizedCode] ?? [];
+  if (bonusCodes.length === 0) {
+    return dedupeCards(mainCards);
+  }
+
+  const allCards = [...mainCards];
+  for (const bonusCode of bonusCodes) {
+    await sleep(PAGE_DELAY_MS);
+    const bonusCards = await fetchDraftCardsForSet(bonusCode);
+    allCards.push(...bonusCards);
+  }
+
+  return dedupeCards(allCards);
 }
 
 /**
