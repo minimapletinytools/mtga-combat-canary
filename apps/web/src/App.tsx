@@ -9,6 +9,7 @@ import { FormatPicker, type Format } from './components/FormatPicker';
 import { ManaSection, type ManaMode } from './components/ManaSection';
 import { TrickList, type SortDirection } from './components/TrickList';
 import { MascotControl, MascotImage, useMascotSelection } from './components/Mascot';
+import { InfoLink } from './components/InfoLink';
 
 // Persisted UI choices. Deliberately not using @mtgatricks/data's KVStore
 // here — the UI stays dependency-light and these are two strings.
@@ -165,7 +166,10 @@ export function App({ cardSource }: AppProps) {
 
   return (
     <>
-      <MascotControl value={mascotSelection.key} onChange={mascotSelection.setKey} />
+      <div className="top-right-bar">
+        <InfoLink />
+        <MascotControl value={mascotSelection.key} onChange={mascotSelection.setKey} />
+      </div>
       <div className="app">
       <div className="header-row">
         <header className="app-header">

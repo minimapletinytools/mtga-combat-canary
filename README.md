@@ -9,9 +9,29 @@ The desktop electron app version supports tailing your MTGA log file to auto-det
 
 ## Running
 
+### Desktop Prerequisites
+
+Before launching the desktop Electron app:
+
+1. **Node.js & pnpm**:
+   - Node.js (v18+) and [pnpm](https://pnpm.io/) installed (`corepack enable` or `npm install -g pnpm`).
+   - Run `pnpm install` in the repository root to install workspace dependencies.
+2. **MTG Arena Detailed Logs** (required for automatic open-mana tracking):
+   - In MTG Arena, navigate to **Options (gear icon) → Account → Detailed Logs (Plugin Support)** and check the box **ON**.
+   - Restart MTG Arena after enabling this setting so game events are written to `Player.log`.
+   - The desktop tracker automatically reads `Player.log` from the standard location:
+     - **macOS**: `~/Library/Logs/Wizards Of The Coast/MTGA/Player.log`
+     - **Windows**: `%USERPROFILE%\AppData\LocalLow\Wizards Of The Coast\MTGA\Player.log`
+     *(Without this log or on unsupported platforms, the app gracefully falls back to manual mana mode).*
+3. **Build workspace outputs**:
+   - The Electron app serves the built web client from `apps/web/dist`. Run `pnpm -r build` (or `make build`) prior to starting.
+4. **Network connection on first run**:
+   - First launch downloads Scryfall's bulk data (~100MB) once to build the local `arena-id → produced mana` mapping cache, and fetches set card data.
+
 ### Desktop
 
 ```sh
+pnpm install
 pnpm -r build                            # core/arena/data + web dist + desktop
 pnpm --filter @mtgatricks/desktop start  # launch the Electron app
 ```
@@ -19,15 +39,15 @@ pnpm --filter @mtgatricks/desktop start  # launch the Electron app
 or alternatively:
 
 ```sh
+pnpm install
 make build   # core/arena/data + web dist + desktop
 make run     # builds (if needed) and launches the Electron app
 ```
 
-For auto-tracking, enable **Options → Account → Detailed Logs (Plugin Support)** in
-MTG Arena. First desktop launch downloads Scryfall's bulk card data once (~100MB) to
-build the arena-id map, cached under the app's user-data directory. Dev mode:
+Dev mode:
 `MTGATRICKS_DEV_URL=http://localhost:5173 pnpm --filter @mtgatricks/desktop start`
-against a running vite dev server. Optional live API smoke test:
+against a running vite dev server (`pnpm --filter @mtgatricks/web dev`).
+Optional live API smoke test:
 `LIVE_SCRYFALL=1 pnpm --filter @mtgatricks/data exec vitest run test/live.integration.test.ts`.
 
 ### Web

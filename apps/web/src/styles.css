@@ -60,11 +60,51 @@ body {
    size in the Open mana panel's dedicated right column instead — see
    .mana-input-mascot-col — so the two never compete for the same space. */
 
-.mascot-control-panel {
+.top-right-bar {
   position: fixed;
   top: 12px;
   right: 14px;
   z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.info-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.3rem 0.7rem;
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-decoration: none;
+  line-height: 1.2;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.info-link:hover {
+  color: var(--text);
+  border-color: var(--border-light);
+  background: var(--bg-card);
+}
+
+.info-link .info-icon {
+  flex-shrink: 0;
+  opacity: 0.8;
+  transition: opacity 0.15s ease;
+}
+
+.info-link:hover .info-icon {
+  opacity: 1;
+}
+
+.mascot-control-panel {
+  display: flex;
+  align-items: center;
 }
 
 .mascot-controls {

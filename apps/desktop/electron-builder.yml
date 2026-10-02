@@ -1,0 +1,36 @@
+appId: com.minimapletinytools.combatcanary
+productName: Combat Canary
+copyright: Copyright © 2026 minimaple
+directories:
+  output: release
+files:
+  - dist/**/*
+  - assets/**/*
+  - package.json
+extraMetadata:
+  main: dist/main.js
+mac:
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+    - target: zip
+      arch:
+        - x64
+        - arm64
+  icon: assets/icon.icns
+  category: public.app-category.games
+  identity: null
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+    - target: portable
+      arch:
+        - x64
+  icon: assets/icon.ico
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true

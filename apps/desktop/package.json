@@ -1,12 +1,17 @@
 {
   "name": "@mtgatricks/desktop",
   "version": "0.0.1",
+  "description": "MTG Combat Canary desktop companion",
+  "author": "minimaple",
   "private": true,
   "type": "module",
   "main": "dist/main.js",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && mv dist/preload.js dist/preload.mjs",
+    "build": "tsc -p tsconfig.build.json && mv dist/preload.js dist/preload.mjs && node -e \"const fs=require('fs'); if(fs.existsSync('../web/dist')) fs.cpSync('../web/dist', 'dist/web', {recursive:true}); if(fs.existsSync('assets')) fs.cpSync('assets', 'dist/assets', {recursive:true});\"",
     "start": "electron .",
+    "package": "electron-builder",
+    "package:mac": "electron-builder --mac",
+    "package:win": "electron-builder --win",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests"
   },
@@ -17,6 +22,7 @@
   "devDependencies": {
     "@types/node": "^22.0.0",
     "electron": "^38.0.0",
+    "electron-builder": "^26.15.3",
     "typescript": "^5.6.0",
     "vitest": "^3.0.0"
   }

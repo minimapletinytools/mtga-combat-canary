@@ -1,4 +1,5 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, shell } from 'electron';
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ArenaStatus, OpenMana } from '@mtgatricks/core';
@@ -9,10 +10,11 @@ import { resolvePlayerLogPath } from './logPath.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
-// A close-up of Combat Canary's face. The assets live beside dist/ rather than
-// in it — tsc only emits JS, so nothing copies them. icon.icns/icon.ico are
-// there for a packager; these two PNGs are what we can set at runtime.
-const assets = path.join(here, '../assets');
+// A close-up of Combat Canary's face. The assets live beside dist/ in development,
+// or copied into dist/assets when packaged.
+const assets = fs.existsSync(path.join(here, 'assets'))
+  ? path.join(here, 'assets')
+  : path.join(here, '../assets');
 const windowIconPath = path.join(assets, 'icon.png'); // full-bleed square
 const dockIconPath = path.join(assets, 'icon-mac.png'); // macOS rounded tile
 
@@ -37,11 +39,19 @@ function createWindow(): BrowserWindow {
     },
   });
 
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    void shell.openExternal(url);
+    return { action: 'deny' };
+  });
+
   const devUrl = process.env['MTGATRICKS_DEV_URL'];
   if (devUrl) {
     void win.loadURL(devUrl);
   } else {
-    void win.loadFile(path.join(here, '../../web/dist/index.html'));
+    const webDistPath = fs.existsSync(path.join(here, 'web/index.html'))
+      ? path.join(here, 'web/index.html')
+      : path.join(here, '../../web/dist/index.html');
+    void win.loadFile(webDistPath);
   }
 
   // Reloads (or a fresh window) miss whatever events already fired — replay
