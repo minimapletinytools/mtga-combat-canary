@@ -2,6 +2,7 @@ import * as fs from 'node:fs';
 import type { ArenaStatus, OpenMana } from '@mtgatricks/core';
 import { LineAssembler, extractGreEvent } from './chunker.js';
 import { countUnresolvedLandMana, deriveOpenMana, subtypesToProducedMana } from './derive.js';
+import { KNOWN_GRP_ID_MANA } from './knownLands.js';
 import { GameStateTracker } from './tracker.js';
 import { LogTailer } from './tailer.js';
 import type { ArenaTrackerOptions } from './types.js';
@@ -164,15 +165,18 @@ export class ArenaTracker {
 
   /**
    * Composite lookup: the configured map first; when it has no answer (its
-   * coverage lags new sets), fall back to land subtypes seen in the log.
+   * coverage lags new sets like Reality Fracture), fall back to known grpId
+   * tables, then land subtypes seen in the log.
    */
   private lookupProducedMana = (grpId: number) => {
     const fromMap = this.options.producedMana(grpId);
     if (fromMap !== undefined && fromMap.length > 0) return fromMap;
+    const fromKnown = KNOWN_GRP_ID_MANA[grpId];
+    if (fromKnown !== undefined && fromKnown.length > 0) return fromKnown;
     const subtypes = this.tracker.lookupSubtypes(grpId);
-    if (subtypes === undefined) return fromMap;
+    if (subtypes === undefined) return fromKnown ?? fromMap;
     const fromSubtypes = subtypesToProducedMana(subtypes);
-    return fromSubtypes.length > 0 ? fromSubtypes : fromMap;
+    return fromSubtypes.length > 0 ? fromSubtypes : (fromKnown ?? fromMap);
   };
 
   private emitMana(): void {

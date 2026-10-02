@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ArenaStatus, OpenMana } from '@mtgatricks/core';
-import { ArenaTracker } from '@mtgatricks/arena';
+import { ArenaTracker, KNOWN_GRP_ID_MANA } from '@mtgatricks/arena';
 import { CHANNEL_OPEN_MANA, CHANNEL_STATUS, CHANNEL_UNRESOLVED_COUNT } from './ipc.js';
 import { loadArenaIdMap } from './arenaIds.js';
 import { resolvePlayerLogPath } from './logPath.js';
@@ -111,7 +111,7 @@ async function setupTracker(): Promise<void> {
 
     const newTracker = new ArenaTracker({
       logPath,
-      producedMana: (grpId) => map.get(grpId),
+      producedMana: (grpId) => map.get(grpId) ?? KNOWN_GRP_ID_MANA[grpId],
       track: 'opponent',
     });
     tracker = newTracker;
