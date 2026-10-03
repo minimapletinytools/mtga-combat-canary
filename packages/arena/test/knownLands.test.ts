@@ -49,8 +49,6 @@ describe('knownLands mapping', () => {
 
   it('maps FRA mana artifacts, creatures, and tokens', () => {
     expect(getKnownProducedMana(106419)).toEqual(['W', 'U', 'B', 'R', 'G']); // Murmuring Volume
-    expect(getKnownProducedMana(106443)).toEqual(['W', 'U', 'B', 'R', 'G']); // Gideon's Memorial
-    expect(getKnownProducedMana(107831)).toEqual(['W', 'U', 'B', 'R', 'G']); // Gideon's Memorial (alt)
     expect(getKnownProducedMana(106338)).toEqual(['G']); // Greenhouse Propagator
     expect(getKnownProducedMana(106339)).toEqual(['C']); // Heartwood Crafter
     expect(getKnownProducedMana(106507)).toEqual(['W', 'U', 'B', 'R', 'G']); // Loot, the Nexus

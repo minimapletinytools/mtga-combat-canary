@@ -56,8 +56,6 @@ export const KNOWN_GRP_ID_MANA: Readonly<Record<number, ReadonlyArray<ManaLetter
 
   // --- Reality Fracture (FRA) Mana Artifacts & Rocks ---
   106419: ['W', 'U', 'B', 'R', 'G'], // Murmuring Volume
-  106443: ['W', 'U', 'B', 'R', 'G'], // Gideon's Memorial
-  107831: ['W', 'U', 'B', 'R', 'G'], // Gideon's Memorial (alt)
 
   // --- Reality Fracture (FRA) Mana Creatures ---
   106338: ['G'],                      // Greenhouse Propagator
