@@ -180,6 +180,50 @@ See `PLAN.md` for the full architecture, pinned interfaces, and phase history.
 
 ## Maintenance and Contribution
 
-This app queries and caches data from scryfall so it should stay most up to date without any maintenance unless scryfall APIs change.
+This app queries and caches data from Scryfall, so card pools and rules text stay up to date without much maintenance.
 
-The desktop floating mana detection is likely to break with each new sets as the lands ids change and this requires someone to manually update the new card ids or perhaps we can find a more stable solution... I play on and off so I may not always update it. You're welcome to open issues or create PRs and I will take a look though!
+### Supporting New Sets During Prerelease / Scryfall Bulk Data Lag
+
+When a new set launches on MTG Arena (or during prerelease), Scryfall's bulk dataset typically lags behind and lacks `arena_id` mappings for the newly released cards.
+
+#### How Open-Mana Detection Resolves Cards
+
+1. **Scryfall Bulk Mapping (`arena-ids.json`)**: Primary lookup. Maps Arena `grpId` directly to `produced_mana`.
+2. **Subtype Fallback (`packages/arena/src/derive.ts`)**: Automatically derives mana for permanents carrying basic land subtypes (`SubType_Plains`, `SubType_Island`, etc., covering basic lands, shocklands, and triomes) and evergreen mana tokens (`SubType_Treasure`, `SubType_Gold`, `SubType_Powerstone`).
+3. **Known GrpId Fallback (`packages/arena/src/knownLands.ts`)**: Supplies hardcoded fallback mappings for cards not yet covered by Scryfall bulk data or subtypes.
+
+#### What Needs to Be Done for a New Set
+
+Permanents that produce mana but **do not** have basic land subtypes will be ignored by auto-detection until mapped. This includes:
+- **Nonbasic lands** without basic subtypes (slow lands, fast lands, annexes, tap duals, utility lands).
+- **Mana rocks and artifacts** (e.g. Murmuring Volume, Arcane Signet).
+- **Mana dorks / creatures** (e.g. Greenhouse Propagator; summoning sickness is automatically tracked and respected).
+- **Set-specific mana tokens** (e.g. Lotus tokens, Sculpture Treasure tokens).
+
+**Steps to add them:**
+
+1. **Find the Arena `grpId`**:
+   - Query MTGA's local SQLite card database:
+     - **macOS**: `~/Library/Application Support/com.wizards.mtga/Downloads/Raw/Raw_CardDatabase_*.mtga`
+     - **Windows**: `%USERPROFILE%\AppData\LocalLow\Wizards Of The Coast\MTGA\Downloads\Raw\Raw_CardDatabase_*.mtga`
+     - Example query:
+       ```sql
+       SELECT c.GrpId, l.Loc FROM Cards c
+       JOIN Localizations_enUS l ON c.TitleId = l.LocId
+       WHERE l.Loc = 'Murmuring Volume';
+       ```
+   - Alternatively, inspect `Player.log` during a match when the card enters the battlefield or is in a zone update.
+2. **Add to `KNOWN_GRP_ID_MANA`**:
+   - In [`packages/arena/src/knownLands.ts`](packages/arena/src/knownLands.ts), add the `grpId` and its producible mana letters:
+     ```ts
+     106419: ['W', 'U', 'B', 'R', 'G'], // Murmuring Volume
+     ```
+3. **Add unit tests**:
+   - Add test assertions in [`packages/arena/test/knownLands.test.ts`](packages/arena/test/knownLands.test.ts) to verify mapping and derivation.
+
+#### Removing the Fallback Once Scryfall Indexes the Set
+
+Once Scryfall updates its bulk data to include the set's `arena_id`s:
+- Refresh the local cache (delete `arena-ids.json` from the app data cache folder so it re-downloads on next launch).
+- The manual entries in `KNOWN_GRP_ID_MANA` (and their corresponding unit tests) can be removed, as `loadArenaIdMap` will resolve them directly from Scryfall's bulk data.
+

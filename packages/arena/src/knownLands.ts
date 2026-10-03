@@ -54,7 +54,24 @@ export const KNOWN_GRP_ID_MANA: Readonly<Record<number, ReadonlyArray<ManaLetter
   106532: ['R'], 106533: ['R'], 106545: ['R'], 106546: ['R'], 106547: ['R'], // Mountain
   106534: ['G'], 106535: ['G'], 106548: ['G'], 106549: ['G'], 106550: ['G'], // Forest
 
+  // --- Reality Fracture (FRA) Mana Artifacts & Rocks ---
+  106419: ['W', 'U', 'B', 'R', 'G'], // Murmuring Volume
+  106443: ['W', 'U', 'B', 'R', 'G'], // Gideon's Memorial
+  107831: ['W', 'U', 'B', 'R', 'G'], // Gideon's Memorial (alt)
+
+  // --- Reality Fracture (FRA) Mana Creatures ---
+  106338: ['G'],                      // Greenhouse Propagator
+  106339: ['C'],                      // Heartwood Crafter
+  106507: ['W', 'U', 'B', 'R', 'G'], // Loot, the Nexus
+
+  // --- Reality Fracture (FRA) Mana Tokens ---
+  106561: ['R', 'G'],                // Heartwood
+  106562: ['W', 'U', 'B', 'R', 'G'], // Lotus
+  106563: ['W', 'U', 'B', 'R', 'G'], // Sculpture Treasure
+  106565: ['W', 'U', 'B', 'R', 'G'], // Treasure
+
   // --- Reality Fracture Commander (FRC) ---
+  107953: ['W', 'U', 'B', 'R', 'G'], // Arcane Signet
   107955: ['W', 'U', 'B', 'R', 'G'], // Command Tower
   107956: ['W', 'U', 'B', 'R', 'G'], // Reflecting Pool
 

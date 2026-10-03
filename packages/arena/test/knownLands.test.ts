@@ -47,14 +47,28 @@ describe('knownLands mapping', () => {
     expect(getKnownProducedMana(106534)).toEqual(['G']); // Forest
   });
 
-  it('maps FRC and SPG lands', () => {
+  it('maps FRA mana artifacts, creatures, and tokens', () => {
+    expect(getKnownProducedMana(106419)).toEqual(['W', 'U', 'B', 'R', 'G']); // Murmuring Volume
+    expect(getKnownProducedMana(106443)).toEqual(['W', 'U', 'B', 'R', 'G']); // Gideon's Memorial
+    expect(getKnownProducedMana(107831)).toEqual(['W', 'U', 'B', 'R', 'G']); // Gideon's Memorial (alt)
+    expect(getKnownProducedMana(106338)).toEqual(['G']); // Greenhouse Propagator
+    expect(getKnownProducedMana(106339)).toEqual(['C']); // Heartwood Crafter
+    expect(getKnownProducedMana(106507)).toEqual(['W', 'U', 'B', 'R', 'G']); // Loot, the Nexus
+    expect(getKnownProducedMana(106561)).toEqual(['R', 'G']); // Heartwood
+    expect(getKnownProducedMana(106562)).toEqual(['W', 'U', 'B', 'R', 'G']); // Lotus
+    expect(getKnownProducedMana(106563)).toEqual(['W', 'U', 'B', 'R', 'G']); // Sculpture Treasure
+    expect(getKnownProducedMana(106565)).toEqual(['W', 'U', 'B', 'R', 'G']); // Treasure
+  });
+
+  it('maps FRC and SPG cards', () => {
+    expect(getKnownProducedMana(107953)).toEqual(['W', 'U', 'B', 'R', 'G']); // Arcane Signet
     expect(getKnownProducedMana(107955)).toEqual(['W', 'U', 'B', 'R', 'G']); // Command Tower
     expect(getKnownProducedMana(107956)).toEqual(['W', 'U', 'B', 'R', 'G']); // Reflecting Pool
     expect(getKnownProducedMana(106566)).toEqual(['C']); // Eye of Ugin
   });
 });
 
-describe('Reality Fracture lands in game state derivation', () => {
+describe('Reality Fracture permanents in game state derivation', () => {
   const land = (instanceId: number, grpId: number, controllerSeatId = 2, tapped = false) => ({
     instanceId,
     grpId,
@@ -65,6 +79,19 @@ describe('Reality Fracture lands in game state derivation', () => {
     controllerSeatId,
     cardTypes: ['CardType_Land'],
     subtypes: [], // FRA dual lands do not have basic land subtypes
+    isTapped: tapped,
+  });
+
+  const artifact = (instanceId: number, grpId: number, controllerSeatId = 2, tapped = false) => ({
+    instanceId,
+    grpId,
+    type: 'GameObjectType_Card',
+    zoneId: 28,
+    visibility: 'Visibility_Public',
+    ownerSeatId: controllerSeatId,
+    controllerSeatId,
+    cardTypes: ['CardType_Artifact'],
+    subtypes: ['SubType_Book'],
     isTapped: tapped,
   });
 
@@ -102,5 +129,33 @@ describe('Reality Fracture lands in game state derivation', () => {
     // None of the untapped lands should be marked unresolved
     const unresolved = countUnresolvedLandMana(tracker.getState(), compositeLookup, 'opponent');
     expect(unresolved).toBe(0);
+  });
+
+  it('derives open mana for opponent Murmuring Volume and mana rocks', () => {
+    const tracker = new GameStateTracker();
+    tracker.applyEvent({
+      greToClientMessages: [
+        {
+          type: 'GREMessageType_GameStateMessage',
+          systemSeatIds: [1],
+          gameStateMessage: {
+            type: 'GameStateType_Full',
+            zones: [{ zoneId: 28, type: 'ZoneType_Battlefield', visibility: 'Visibility_Public' }],
+            gameObjects: [
+              artifact(201, 106419), // Murmuring Volume (untapped)
+              artifact(202, 106419, 2, true), // Murmuring Volume (tapped)
+            ],
+          },
+        },
+      ],
+    });
+
+    const compositeLookup = (grpId: number) => KNOWN_GRP_ID_MANA[grpId];
+    const mana = deriveOpenMana(tracker.getState(), compositeLookup, 'opponent');
+    expect(mana).toEqual({
+      sources: [
+        { produces: ['W', 'U', 'B', 'R', 'G'] },
+      ],
+    });
   });
 });
