@@ -75,6 +75,70 @@ export const KNOWN_GRP_ID_MANA: Readonly<Record<number, ReadonlyArray<ManaLetter
 
   // --- Special Guests (SPG) ---
   106566: ['C'], // Eye of Ugin
+
+  // --- Star Trek (TRK) Lands ---
+  // Gain lands (enter tapped, gain 1 life)
+  106852: ['U', 'R'], // Andoria
+  106854: ['R', 'W'], // Bajor
+  106857: ['W', 'B'], // Cardassia Prime
+  106858: ['G', 'U'], // Earth, Sector 001
+  106860: ['B', 'G'], // Ferenginar
+  106865: ['R', 'G'], // Orion
+  106868: ['B', 'R'], // Qo'noS
+  106870: ['G', 'W'], // Risa
+  106871: ['U', 'B'], // Romulus
+  106882: ['W', 'U'], // Vulcan
+
+  // Mono-color surveil lands (untapped with 2+ other lands)
+  106859: ['W'], 107534: ['W'],               // Federation Outpost
+  106864: ['U'], 107535: ['U'],               // Ni'Var Science Academy
+  106881: ['B'], 107539: ['B'],               // The Unicomplex
+  106869: ['R'], 107537: ['R'], 107552: ['R'], // Quark's Bar
+  106867: ['G'], 107536: ['G'],               // Q Continuum
+
+  // Colorless utility lands
+  106853: ['C'], // Artificial Anomaly
+  106861: ['C'], // Gaseous Anomaly
+  106873: ['C'], // Spatial Anomaly
+  106877: ['C'], // Subspace Anomaly
+  106879: ['C'], // Temporal Anomaly
+  106880: ['C'], // Unexplored Territory
+  106874: ['C'], 107538: ['C'], // Starfleet Academy (Federation any-color ability ignored)
+
+  // Shocklands (backup in case log subtypes are missing)
+  106855: ['B', 'R'], 109431: ['B', 'R'], // Blood Crypt
+  106856: ['U', 'G'], 109438: ['U', 'G'], // Breeding Pool
+  106862: ['W', 'B'], 109434: ['W', 'B'], // Godless Shrine
+  106863: ['W', 'U'], 109429: ['W', 'U'], // Hallowed Fountain
+  106866: ['B', 'G'], 109436: ['B', 'G'], // Overgrown Tomb
+  106872: ['R', 'W'], 109437: ['R', 'W'], // Sacred Foundry
+  106875: ['U', 'R'], 109435: ['U', 'R'], // Steam Vents
+  106876: ['R', 'G'], 109432: ['R', 'G'], // Stomping Ground
+  106878: ['G', 'W'], 109433: ['G', 'W'], // Temple Garden
+  106883: ['U', 'B'], 109430: ['U', 'B'], // Watery Grave
+
+  // Basics (backup in case log subtypes are missing)
+  106884: ['W'], 106889: ['W'], 106894: ['W'], 106895: ['W'], // Plains
+  106885: ['U'], 106890: ['U'], 106896: ['U'], 106897: ['U'], // Island
+  106886: ['B'], 106891: ['B'], 106898: ['B'], 106899: ['B'], // Swamp
+  106887: ['R'], 106892: ['R'], 106900: ['R'], 106901: ['R'], // Mountain
+  106888: ['G'], 106893: ['G'], 106902: ['G'], 106903: ['G'], // Forest
+
+  // --- Star Trek (TRK) Mana Artifacts & Rocks ---
+  106836: ['W', 'U', 'B', 'R', 'G'], // Class-F Shuttlecraft
+  106843: ['C'],                      // Isolinear Processor (artifact-only mana; over-reports)
+
+  // --- Star Trek (TRK) Mana Creatures ---
+  106748: ['R'],                      // Savvy Profiteer
+  106801: ['W', 'U', 'B', 'R', 'G'], // Xenobotanist
+
+  // --- Star Trek (TRK) Mana Tokens ---
+  106929: ['W', 'U', 'B', 'R', 'G'], // Treasure
+  106930: ['W', 'U', 'B', 'R', 'G'], // New Planet (land token)
+
+  // --- Star Trek Commander (TRC) Mana Creatures ---
+  107707: ['U'], // La Forge, Perceptive Engineer (artifact-only mana; over-reports)
+  107733: ['G'], // Gumato (taps for GGG; counted as one source)
 };
 
 /**

@@ -157,3 +157,69 @@ describe('Reality Fracture permanents in game state derivation', () => {
     });
   });
 });
+
+describe('Star Trek (TRK/TRC) mapping', () => {
+  it('maps TRK gain lands and surveil lands', () => {
+    expect(getKnownProducedMana(106852)).toEqual(['U', 'R']); // Andoria
+    expect(getKnownProducedMana(106882)).toEqual(['W', 'U']); // Vulcan
+    expect(getKnownProducedMana(106868)).toEqual(['B', 'R']); // Qo'noS
+    expect(getKnownProducedMana(106859)).toEqual(['W']); // Federation Outpost
+    expect(getKnownProducedMana(107552)).toEqual(['R']); // Quark's Bar (alt)
+    expect(getKnownProducedMana(106874)).toEqual(['C']); // Starfleet Academy
+  });
+
+  it('maps TRK mana rocks, dorks, and tokens', () => {
+    expect(getKnownProducedMana(106836)).toEqual(['W', 'U', 'B', 'R', 'G']); // Class-F Shuttlecraft
+    expect(getKnownProducedMana(106843)).toEqual(['C']); // Isolinear Processor
+    expect(getKnownProducedMana(106748)).toEqual(['R']); // Savvy Profiteer
+    expect(getKnownProducedMana(106801)).toEqual(['W', 'U', 'B', 'R', 'G']); // Xenobotanist
+    expect(getKnownProducedMana(106929)).toEqual(['W', 'U', 'B', 'R', 'G']); // Treasure
+    expect(getKnownProducedMana(106930)).toEqual(['W', 'U', 'B', 'R', 'G']); // New Planet
+    expect(getKnownProducedMana(107707)).toEqual(['U']); // La Forge, Perceptive Engineer
+    expect(getKnownProducedMana(107733)).toEqual(['G']); // Gumato
+  });
+
+  it('derives open mana for opponent TRK dorks and rocks', () => {
+    const permanent = (instanceId: number, grpId: number, cardTypes: string[], tapped = false) => ({
+      instanceId,
+      grpId,
+      type: 'GameObjectType_Card',
+      zoneId: 28,
+      visibility: 'Visibility_Public',
+      ownerSeatId: 2,
+      controllerSeatId: 2,
+      cardTypes,
+      subtypes: [],
+      isTapped: tapped,
+    });
+    const tracker = new GameStateTracker();
+    tracker.applyEvent({
+      greToClientMessages: [
+        {
+          type: 'GREMessageType_GameStateMessage',
+          systemSeatIds: [1],
+          gameStateMessage: {
+            type: 'GameStateType_Full',
+            zones: [{ zoneId: 28, type: 'ZoneType_Battlefield', visibility: 'Visibility_Public' }],
+            gameObjects: [
+              permanent(301, 106801, ['CardType_Creature']), // Xenobotanist
+              permanent(302, 106748, ['CardType_Creature'], true), // Savvy Profiteer (tapped)
+              permanent(303, 106836, ['CardType_Artifact']), // Class-F Shuttlecraft
+              permanent(304, 106852, ['CardType_Land']), // Andoria
+            ],
+          },
+        },
+      ],
+    });
+
+    const lookup = (grpId: number) => KNOWN_GRP_ID_MANA[grpId];
+    expect(deriveOpenMana(tracker.getState(), lookup, 'opponent')).toEqual({
+      sources: [
+        { produces: ['W', 'U', 'B', 'R', 'G'] },
+        { produces: ['W', 'U', 'B', 'R', 'G'] },
+        { produces: ['U', 'R'] },
+      ],
+    });
+    expect(countUnresolvedLandMana(tracker.getState(), lookup, 'opponent')).toBe(0);
+  });
+});
